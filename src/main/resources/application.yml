@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./target/h2
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    generate-ddl: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+#Actuator
+management:
+  endpoints:
+    web.exposure.include: "*"
+  endpoint:
+    health:
+      show-details: ALWAYS
+
+axon:
+  serializer:
+    events: jackson
+
