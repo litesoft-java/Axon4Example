@@ -12,6 +12,7 @@ import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.messaging.unitofwork.UnitOfWork;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import sun.jvmstat.monitor.MonitorException;
@@ -29,24 +30,12 @@ public class TaskEntryUpdatingEventHandler implements PrimaryProjector {
         this.taskEntryRepository = taskEntryRepository;
     }
 
-    public TaskEventCreated syncProcess( TaskEventCreated event ) {
-        if ( "BadTask".equals( event.getTitle() ) ) {
-            uow.root().rollback( new SQLException( "TaskEntryUpdatingEventHandler: BadTask" ) );
-//            throw new ConstraintViolationException( "TaskEntryUpdatingEventHandler: BadTask",
-//                                                    new SQLException(), "Ginger" );
-        }
-        new MonitorException( Instant.now().toString() ).printStackTrace();
-        TaskEntry task = new TaskEntry( event.getId(), event.getUsername(), event.getTitle(), false, false );
-        taskEntryRepository.save( task );
-    }
-
     @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventCreated event, UnitOfWork<?> uow ) {
         if ( "BadTask".equals( event.getTitle() ) ) {
-            uow.root().rollback( new SQLException( "TaskEntryUpdatingEventHandler: BadTask" ) );
-//            throw new ConstraintViolationException( "TaskEntryUpdatingEventHandler: BadTask",
-//                                                    new SQLException(), "Ginger" );
+            throw new ConstraintViolationException( "TaskEntryUpdatingEventHandler: BadTask",
+                                                    new SQLException(), "Ginger" );
         }
         new MonitorException( Instant.now().toString() ).printStackTrace();
         TaskEntry task = new TaskEntry( event.getId(), event.getUsername(), event.getTitle(), false, false );

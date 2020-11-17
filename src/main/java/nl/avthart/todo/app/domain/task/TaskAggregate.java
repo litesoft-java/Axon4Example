@@ -12,7 +12,6 @@ import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
-import nl.avthart.todo.app.query.task.TaskEntryUpdatingEventHandler;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
@@ -32,7 +31,7 @@ public class TaskAggregate {
     /**
      * The constant serialVersionUID
      */
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     private static final long serialVersionUID = -5977984483620451665L;
 
     @AggregateIdentifier
@@ -46,13 +45,12 @@ public class TaskAggregate {
      * @param command create Task
      */
     @CommandHandler
-    public TaskAggregate( TaskCommandCreate command, TaskEntryUpdatingEventHandler primaryProjector ) {
-        if ("BadCmdTask".equals( command.getTitle() )) {
+    public TaskAggregate( TaskCommandCreate command ) {
+        if ( "BadCmdTask".equals( command.getTitle() ) ) {
             throw new IllegalArgumentException( "TaskAggregate (command): BadCmdTask" );
         }
-        System.out.println( "TaskAggregate.TaskAggregate ************: " + (primaryProjector != null) );
-        // new MonitorException( Instant.now().toString() ).printStackTrace();
-        apply( primaryProjector.syncProcess( new TaskEventCreated( command.getId(), command.getUsername(), command.getTitle() ) ) );
+        new MonitorException( Instant.now().toString() ).printStackTrace();
+        apply( new TaskEventCreated( command.getId(), command.getUsername(), command.getTitle() ) );
     }
 
     TaskAggregate() {
@@ -64,7 +62,7 @@ public class TaskAggregate {
      * @param command complete Task
      */
     @SuppressWarnings("unused")
-	@CommandHandler
+    @CommandHandler
     void on( TaskCommandComplete command ) {
         apply( new TaskEventCompleted( command.getId() ) );
     }
@@ -74,8 +72,8 @@ public class TaskAggregate {
      *
      * @param command star Task
      */
-	@SuppressWarnings("unused")
-	@CommandHandler
+    @SuppressWarnings("unused")
+    @CommandHandler
     void on( TaskCommandStar command ) {
         apply( new TaskEventStarred( command.getId() ) );
     }
@@ -85,7 +83,7 @@ public class TaskAggregate {
      *
      * @param command unstar Task
      */
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandUnstar command ) {
         apply( new TaskEventUnstarred( command.getId() ) );
@@ -96,24 +94,24 @@ public class TaskAggregate {
      *
      * @param command modify Task title
      */
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandModifyTitle command ) {
         assertNotCompleted();
         apply( new TaskEventTitleModified( command.getId(), command.getTitle() ) );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventSourcingHandler
     void on( TaskEventCreated event ) {
-        if ("BadEventTask".equals( event.getTitle() )) {
+        if ( "BadEventTask".equals( event.getTitle() ) ) {
             throw new IllegalArgumentException( "TaskAggregate (event): BadEventTask" );
         }
-        // new MonitorException( Instant.now().toString() ).printStackTrace();
+        new MonitorException( Instant.now().toString() ).printStackTrace();
         id = event.getId();
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventSourcingHandler
     void on( TaskEventCompleted event ) {
         completed = true;
