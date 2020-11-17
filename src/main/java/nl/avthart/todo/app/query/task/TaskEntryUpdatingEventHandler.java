@@ -4,7 +4,6 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.function.Consumer;
 
-import nl.avthart.todo.app.configuration.PrimaryProjector;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
@@ -21,7 +20,7 @@ import sun.jvmstat.monitor.MonitorException;
  * @author albert
  */
 @Component
-public class TaskEntryUpdatingEventHandler implements PrimaryProjector {
+public class TaskEntryUpdatingEventHandler {
 
     private final TaskEntryRepository taskEntryRepository;
 
