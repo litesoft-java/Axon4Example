@@ -1,20 +1,18 @@
 package nl.avthart.todo.app.notify.task;
 
-import java.time.Instant;
-
 import nl.avthart.todo.app.domain.task.events.TaskEvent;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
+import nl.avthart.todo.app.flags.Monitor;
 import nl.avthart.todo.app.query.task.TaskEntry;
 import nl.avthart.todo.app.query.task.TaskEntryRepository;
 import org.axonframework.eventhandling.EventHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Component;
-import sun.jvmstat.monitor.MonitorException;
 
 /**
  * @author albert
@@ -32,32 +30,32 @@ public class TaskEventNotifyingEventHandler {
         this.taskEntryRepository = taskEntryRepository;
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventCreated event ) {
-        new MonitorException( Instant.now().toString() ).printStackTrace();
+        Monitor.show();
         publish( event.getUsername(), event );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventCompleted event ) {
-		readAndPublish( event );
+        readAndPublish( event );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventTitleModified event ) {
-		readAndPublish( event );
+        readAndPublish( event );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventStarred event ) {
-		readAndPublish( event );
+        readAndPublish( event );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventUnstarred event ) {
         readAndPublish( event );

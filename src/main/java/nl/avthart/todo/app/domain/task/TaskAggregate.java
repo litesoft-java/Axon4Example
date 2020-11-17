@@ -1,7 +1,5 @@
 package nl.avthart.todo.app.domain.task;
 
-import java.time.Instant;
-
 import nl.avthart.todo.app.domain.task.commands.TaskCommandComplete;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandModifyTitle;
@@ -12,11 +10,11 @@ import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
+import nl.avthart.todo.app.flags.Monitor;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.spring.stereotype.Aggregate;
-import sun.jvmstat.monitor.MonitorException;
 
 import static org.axonframework.modelling.command.AggregateLifecycle.apply;
 
@@ -49,7 +47,7 @@ public class TaskAggregate {
         if ( "BadCmdTask".equals( command.getTitle() ) ) {
             throw new IllegalArgumentException( "TaskAggregate (command): BadCmdTask" );
         }
-        new MonitorException( Instant.now().toString() ).printStackTrace();
+        Monitor.show();
         apply( new TaskEventCreated( command.getId(), command.getUsername(), command.getTitle() ) );
     }
 
@@ -107,7 +105,7 @@ public class TaskAggregate {
         if ( "BadEventTask".equals( event.getTitle() ) ) {
             throw new IllegalArgumentException( "TaskAggregate (event): BadEventTask" );
         }
-        new MonitorException( Instant.now().toString() ).printStackTrace();
+        Monitor.show();
         id = event.getId();
     }
 

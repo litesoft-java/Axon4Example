@@ -1,7 +1,6 @@
 package nl.avthart.todo.app.query.task;
 
 import java.sql.SQLException;
-import java.time.Instant;
 import java.util.function.Consumer;
 
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
@@ -9,12 +8,12 @@ import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
+import nl.avthart.todo.app.flags.Monitor;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.messaging.unitofwork.UnitOfWork;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import sun.jvmstat.monitor.MonitorException;
 
 /**
  * @author albert
@@ -36,7 +35,7 @@ public class TaskEntryUpdatingEventHandler {
             throw new ConstraintViolationException( "TaskEntryUpdatingEventHandler: BadTask",
                                                     new SQLException(), "Ginger" );
         }
-        new MonitorException( Instant.now().toString() ).printStackTrace();
+        Monitor.show();
         TaskEntry task = new TaskEntry( event.getId(), event.getUsername(), event.getTitle(), false, false );
         taskEntryRepository.save( task );
     }
