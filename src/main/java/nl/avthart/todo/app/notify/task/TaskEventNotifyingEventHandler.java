@@ -1,20 +1,19 @@
 package nl.avthart.todo.app.notify.task;
 
-import java.time.Instant;
-
 import nl.avthart.todo.app.domain.task.events.TaskEvent;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
+import nl.avthart.todo.app.flags.Monitor;
 import nl.avthart.todo.app.query.task.TaskEntry;
 import nl.avthart.todo.app.query.task.TaskEntryRepository;
 import org.axonframework.eventhandling.EventHandler;
+import org.axonframework.eventhandling.SequenceNumber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Component;
-import sun.jvmstat.monitor.MonitorException;
 
 /**
  * @author albert
@@ -32,49 +31,48 @@ public class TaskEventNotifyingEventHandler {
         this.taskEntryRepository = taskEntryRepository;
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
-    void on( TaskEventCreated event ) {
-        new MonitorException( Instant.now().toString() ).printStackTrace();
-        publish( event.getUsername(), event );
+    void on( TaskEventCreated event, @SequenceNumber long version ) {
+        Monitor.show();
+        readAndPublish( event, version ); // because the PrimaryProjector is updated synchronously, we can rely on the repository to be updated already
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
-    void on( TaskEventCompleted event ) {
-		readAndPublish( event );
+    void on( TaskEventCompleted event, @SequenceNumber long version ) {
+        readAndPublish( event, version );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
-    void on( TaskEventTitleModified event ) {
-		readAndPublish( event );
+    void on( TaskEventTitleModified event, @SequenceNumber long version ) {
+        readAndPublish( event, version );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
-    void on( TaskEventStarred event ) {
-		readAndPublish( event );
+    void on( TaskEventStarred event, @SequenceNumber long version ) {
+        readAndPublish( event, version );
     }
 
-	@SuppressWarnings("unused")
+    @SuppressWarnings("unused")
     @EventHandler
-    void on( TaskEventUnstarred event ) {
-        readAndPublish( event );
+    void on( TaskEventUnstarred event, @SequenceNumber long version ) {
+        readAndPublish( event, version );
     }
 
-    private void readAndPublish( TaskEvent event ) {
+    private void readAndPublish( TaskEvent event, long version ) {
         String zId = event.getId();
         TaskEntry task = taskEntryRepository.findById( zId ).orElse( null );
-        if ( task != null ) {
-            publish( task.getUsername(), event );
-        } else {
+        if ( task == null ) {
             new IllegalStateException( "Task '" + zId + "' not found" ).printStackTrace();
+            return;
         }
-    }
-
-    private void publish( String username, TaskEvent event ) {
+        String username = task.getUsername();
         String type = event.getClass().getSimpleName();
-        this.messagingTemplate.convertAndSendToUser( username, "/queue/task-updates", new TaskEventNotification( type, event ) );
+        System.out.println( "************ Published: " + type + " (" + version + ")");
+        this.messagingTemplate.convertAndSendToUser( username, "/queue/task-updates",
+                                                     new TaskEventNotification( type, event ) );
     }
 }

@@ -53,32 +53,32 @@ public class TaskController {
     @RequestMapping(value = "/api/tasks", method = RequestMethod.POST)
     @ResponseStatus(value = HttpStatus.CREATED)
     public void create( Principal principal, @RequestBody @Valid TaskRequestCreate request ) {
-        commandGateway.send( new TaskCommandCreate( identifierFactory.generateIdentifier(), principal.getName(), request.getTitle() ) );
+        commandGateway.sendAndWait( new TaskCommandCreate( identifierFactory.generateIdentifier(), principal.getName(), request.getTitle() ) );
     }
 
     @RequestMapping(value = "/api/tasks/{identifier}/title", method = RequestMethod.POST) // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void modifyTitle( @PathVariable String identifier, @RequestBody @Valid TaskRequestModifyTitle request ) {
-        commandGateway.send( new TaskCommandModifyTitle( identifier, request.getTitle() ) );
+        commandGateway.sendAndWait( new TaskCommandModifyTitle( identifier, request.getTitle() ) );
     }
 
     @RequestMapping(value = "/api/tasks/{identifier}/complete", method = RequestMethod.POST) // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void complete( @PathVariable String identifier ) {
-        commandGateway.send( new TaskCommandComplete( identifier ) );
+        commandGateway.sendAndWait( new TaskCommandComplete( identifier ) );
     }
 
     @RequestMapping(value = "/api/tasks/{identifier}/star", method = RequestMethod.POST) // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void star( @PathVariable String identifier ) {
-        commandGateway.send( new TaskCommandStar( identifier ) );
+        commandGateway.sendAndWait( new TaskCommandStar( identifier ) );
     }
 
     @RequestMapping(value = "/api/tasks/{identifier}/unstar", method = RequestMethod.POST) // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void unstar( @PathVariable String identifier ) {
-		throw new RuntimeException("Could not unstar task...");
-//        commandGateway.sendAndWait( new TaskCommandUnstar( identifier ) );
+//		throw new RuntimeException("Could not unstar task...");
+        commandGateway.sendAndWait( new TaskCommandUnstar( identifier ) );
     }
 
     @ExceptionHandler

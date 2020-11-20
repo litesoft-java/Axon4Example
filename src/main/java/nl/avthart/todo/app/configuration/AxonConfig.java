@@ -1,14 +1,9 @@
 package nl.avthart.todo.app.configuration;
 
-import java.util.List;
-
 import org.axonframework.commandhandling.CommandBus;
 import org.axonframework.commandhandling.SimpleCommandBus;
 import org.axonframework.common.jpa.EntityManagerProvider;
 import org.axonframework.common.transaction.TransactionManager;
-import org.axonframework.config.EventProcessingConfigurer;
-import org.axonframework.eventhandling.PropagatingErrorHandler;
-import org.axonframework.eventhandling.SimpleEventBus;
 import org.axonframework.eventhandling.interceptors.EventLoggingInterceptor;
 import org.axonframework.eventhandling.tokenstore.TokenStore;
 import org.axonframework.eventhandling.tokenstore.jpa.JpaTokenStore;
@@ -33,14 +28,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @RegisterDefaultEntities(packages = "org.axonframework.eventsourcing.eventstore.jpa")
 public class AxonConfig {
-    public AxonConfig( EventProcessingConfigurer config, List<PrimaryProjector> primaryProjectors ) {
-        config.registerDefaultListenerInvocationErrorHandler( conf -> PropagatingErrorHandler.instance() );
-        for ( PrimaryProjector projector : primaryProjectors ) {
-            Class<? extends PrimaryProjector> zClass = projector.getClass();
-            config.registerSubscribingEventProcessor( zClass.getPackage().getName() );
-            System.out.println( "Primary Projector: " + zClass.getName() );
-        }
-    }
 
     @Bean
     public CommandBus commandBus() {
