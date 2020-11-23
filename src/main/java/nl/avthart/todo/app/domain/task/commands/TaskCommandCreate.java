@@ -2,6 +2,7 @@ package nl.avthart.todo.app.domain.task.commands;
 
 import javax.validation.constraints.NotNull;
 
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -16,9 +17,10 @@ public class TaskCommandCreate extends TaskCommand {
     @NotNull
     private final String title;
 
-    public TaskCommandCreate( String id, String pUsername, String pTitle ) {
+    @Builder
+    public TaskCommandCreate( String id, String username, String title ) {
         super( id );
-        username = pUsername;
-        title = pTitle;
+        this.username = username;
+        this.title = title;
     }
 }
