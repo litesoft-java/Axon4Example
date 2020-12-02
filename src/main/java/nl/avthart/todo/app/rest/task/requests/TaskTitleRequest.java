@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public abstract class TaskRequest {
-	
+public abstract class TaskTitleRequest {
 	@NotNull
 	private String title;
 }

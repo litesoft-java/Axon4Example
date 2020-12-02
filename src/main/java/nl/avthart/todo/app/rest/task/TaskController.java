@@ -5,18 +5,9 @@ import javax.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 import nl.avthart.todo.app.configuration.Endpoint;
-import nl.avthart.todo.app.domain.task.commands.TaskCommand;
-import nl.avthart.todo.app.domain.task.commands.TaskCommandComplete;
-import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
-import nl.avthart.todo.app.domain.task.commands.TaskCommandModifyTitle;
-import nl.avthart.todo.app.domain.task.commands.TaskCommandStar;
-import nl.avthart.todo.app.domain.task.commands.TaskCommandUnstar;
 import nl.avthart.todo.app.query.task.TaskActive;
-import nl.avthart.todo.app.query.task.TaskPrimaryProjectionRepository;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestCreate;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestModifyTitle;
-import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.axonframework.common.IdentifierFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -34,86 +25,66 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * @author albert
- */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/tasks")
 public class TaskController implements Endpoint.Controller {
-
-    private final IdentifierFactory identifierFactory = IdentifierFactory.getInstance();
-
-    private final TaskPrimaryProjectionRepository repo;
-
+    private final TaskRequestHandler handler;
     private final SimpMessageSendingOperations messagingTemplate;
-
-    private final CommandGateway commandGateway;
 
     @GetMapping
     public @ResponseBody
     Page<TaskActive> findAll( Principal principal,
                               @RequestParam(required = false, defaultValue = "false") boolean completed,
                               Pageable pageable ) {
-        return repo.findActiveByUsernameAndCompleted( principal.getName(), completed, pageable );
+        return handler.findAll( principal.getName(), completed, pageable );
     }
 
     @PostMapping
     @ResponseStatus(value = HttpStatus.CREATED)
     public void create( Principal principal, @RequestBody @Valid TaskRequestCreate request ) {
-        sendAndWait( TaskCommandCreate.builder()
-                             .id( identifierFactory.generateIdentifier() )
-                             .username( principal.getName() )
-                             .title( request.getTitle() )
-                             .build() );
+        handler.create( principal.getName(), request );
     }
 
     @PostMapping("/{identifier}/title") // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void modifyTitle( @PathVariable String identifier, @RequestBody @Valid TaskRequestModifyTitle request ) {
-        sendAndWait( TaskCommandModifyTitle.builder()
-                             .id( identifier )
-                             .title( request.getTitle() )
-                             .build() );
+        handler.modifyTitle( identifier, request );
     }
 
     @PostMapping("/{identifier}/complete") // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void complete( @PathVariable String identifier ) {
-        sendAndWait( new TaskCommandComplete( identifier ) );
+        handler.complete( identifier );
     }
 
     @PostMapping("/{identifier}/star") // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void star( @PathVariable String identifier ) {
-        sendAndWait( new TaskCommandStar( identifier ) );
+        handler.star( identifier );
     }
 
     @PostMapping("/{identifier}/unstar") // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unstar( @PathVariable String identifier ) {
-        sendAndWait( new TaskCommandUnstar( identifier ) );
+        handler.unstar( identifier );
     }
 
     @DeleteMapping("/{identifier}/delete")
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     public void delete( @PathVariable String identifier ) {
-        // TODO: sendAndWait( new TaskCommandDelete( identifier ) );
+        handler.delete( identifier );
     }
 
     @PutMapping("/{identifier}/restore")
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     @Endpoint.Admin
     public void restore( @PathVariable String identifier ) {
-        // TODO: sendAndWait( new TaskCommandRestore( identifier ) );
+        handler.restore( identifier );
     }
 
     @ExceptionHandler
     public void handleException( Principal principal, Throwable exception ) {
         messagingTemplate.convertAndSendToUser( principal.getName(), "/queue/errors", exception.getMessage() );
-    }
-
-    private void sendAndWait( TaskCommand command ) {
-        commandGateway.sendAndWait( command );
     }
 }
