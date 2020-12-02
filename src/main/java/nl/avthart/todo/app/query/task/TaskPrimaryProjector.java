@@ -47,7 +47,6 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskA
         return new TaskActive( TaskEntity.builder()
                                        .id( event.getId() )
                                        .version( 0L )
-                                       .lastModified( createdAt )
                                        .createdHour( toHour( createdAt ) )
                                        .username( event.getUsername() )
                                        .title( event.getTitle() )

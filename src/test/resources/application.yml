@@ -9,8 +9,3 @@ spring:
     console:
       enabled: true
       path: /h2-console
-
-axon:
-  serializer:
-    events: jackson
-

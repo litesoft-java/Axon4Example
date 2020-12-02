@@ -16,17 +16,23 @@ import org.axonframework.modelling.saga.repository.SagaStore;
 import org.axonframework.modelling.saga.repository.jpa.JpaSagaStore;
 import org.axonframework.queryhandling.QueryBus;
 import org.axonframework.queryhandling.SimpleQueryBus;
-import org.axonframework.serialization.Serializer;
+import org.axonframework.serialization.json.JacksonSerializer;
 import org.axonframework.serialization.xml.XStreamSerializer;
 import org.axonframework.spring.config.AxonConfiguration;
 import org.axonframework.springboot.util.RegisterDefaultEntities;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 @Configuration
 @RegisterDefaultEntities(packages = "org.axonframework.eventsourcing.eventstore.jpa")
+@ComponentScan(basePackages = {
+        "org.axonframework.eventsourcing.eventstore.jpa", // DomainEventEntry & SnapshotEventEntry
+        "org.axonframework.modelling.saga.repository.jpa", // SagaEntry & AssociationValueEntry
+        "org.axonframework.eventhandling.tokenstore.jpa" // TokenEntry
+})
 public class AxonConfig {
 
     @Bean
@@ -43,8 +49,8 @@ public class AxonConfig {
         return queryBus;
     }
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Bean
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     public EmbeddedEventStore jpaEventStore(
             @Qualifier("jpaEventStorageEngine") EventStorageEngine storageEngine,
             AxonConfiguration configuration
@@ -59,13 +65,12 @@ public class AxonConfig {
 
     @Bean
     public EventStorageEngine jpaEventStorageEngine(
-            @Qualifier("eventSerializer") Serializer eventSerializer,
             EntityManagerProvider entityManagerProvider,
             // EventUpcaster upcasterChain,
             TransactionManager transactionManager
     ) {
         return JpaEventStorageEngine.builder()
-                .eventSerializer( eventSerializer )
+                .eventSerializer( JacksonSerializer.builder().build() )
                 .entityManagerProvider( entityManagerProvider )
                 .transactionManager( transactionManager )
                 // .upcasterChain(upcasterChain)

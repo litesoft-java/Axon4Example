@@ -19,7 +19,7 @@ management:
     health:
       show-details: ALWAYS
 
-axon:
-  serializer:
-    events: jackson
+#axon:
+#  serializer:
+#    events: jackson
 

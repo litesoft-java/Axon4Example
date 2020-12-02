@@ -144,8 +144,8 @@ public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends Act
         return (entityName + " (" + id + ") " + suffix).trim();
     }
 
-    protected String error( IdSupplier<ID_Type> projection, String suffix ) {
-        return error( projection.getId(), suffix );
+    protected String error( IdSupplier<ID_Type> idSupplier, String suffix ) {
+        return error( idSupplier.getId(), suffix );
     }
 
     protected EntityActive readActive( Event<ID_Type> event ) {
@@ -156,13 +156,13 @@ public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends Act
         return repo.findDeletedById( event.getId() );
     }
 
-    protected OptimisticLockException versionError( IdSupplier<ID_Type> projection, Throwable... cause ) {
-        return new OptimisticLockException( error( projection, "data has changed" ),
+    protected OptimisticLockException versionError( IdSupplier<ID_Type> idSupplier, Throwable... cause ) {
+        return new OptimisticLockException( error( idSupplier, "data has changed" ),
                                             cause );
     }
 
-    protected BusinessRuleException constraintError( IdSupplier<ID_Type> projection, String message, Throwable... cause ) {
-        return new BusinessRuleException( error( projection, message ),
+    protected BusinessRuleException constraintError( IdSupplier<ID_Type> idSupplier, String message, Throwable... cause ) {
+        return new BusinessRuleException( error( idSupplier, message ),
                                           cause );
     }
 
