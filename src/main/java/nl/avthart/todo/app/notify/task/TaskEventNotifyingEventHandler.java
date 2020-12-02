@@ -7,8 +7,8 @@ import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
 import nl.avthart.todo.app.flags.Monitor;
-import nl.avthart.todo.app.query.task.TaskEntry;
-import nl.avthart.todo.app.query.task.TaskEntryRepository;
+import nl.avthart.todo.app.query.task.TaskActive;
+import nl.avthart.todo.app.query.task.TaskPrimaryProjectionRepository;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.eventhandling.SequenceNumber;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +23,12 @@ public class TaskEventNotifyingEventHandler {
 
     private final SimpMessageSendingOperations messagingTemplate;
 
-    private final TaskEntryRepository taskEntryRepository;
+    private final TaskPrimaryProjectionRepository repo;
 
     @Autowired
-    public TaskEventNotifyingEventHandler( SimpMessageSendingOperations messagingTemplate, TaskEntryRepository taskEntryRepository ) {
+    public TaskEventNotifyingEventHandler( SimpMessageSendingOperations messagingTemplate, TaskPrimaryProjectionRepository repo ) {
         this.messagingTemplate = messagingTemplate;
-        this.taskEntryRepository = taskEntryRepository;
+        this.repo = repo;
     }
 
     @SuppressWarnings("unused")
@@ -64,14 +64,14 @@ public class TaskEventNotifyingEventHandler {
 
     private void readAndPublish( TaskEvent event, long version ) {
         String zId = event.getId();
-        TaskEntry task = taskEntryRepository.findById( zId ).orElse( null );
+        TaskActive task = repo.findActiveById( zId );
         if ( task == null ) {
             new IllegalStateException( "Task '" + zId + "' not found" ).printStackTrace();
             return;
         }
         String username = task.getUsername();
         String type = event.getClass().getSimpleName();
-        System.out.println( "************ Published: " + type + " (" + version + ")");
+        System.out.println( "************ Published: " + type + " (" + version + ")" );
         this.messagingTemplate.convertAndSendToUser( username, "/queue/task-updates",
                                                      new TaskEventNotification( type, event ) );
     }

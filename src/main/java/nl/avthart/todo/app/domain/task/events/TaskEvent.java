@@ -1,5 +1,6 @@
 package nl.avthart.todo.app.domain.task.events;
 
-public interface TaskEvent {
-	String getId();
+import nl.avthart.todo.app.common.axon.Event;
+
+public interface TaskEvent extends Event<String> {
 }

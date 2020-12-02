@@ -7,6 +7,6 @@ import org.springframework.data.repository.CrudRepository;
 /**
  * @author albert
  */
-public interface TaskEntryRepository extends CrudRepository<TaskEntry, String> {
-	Page<TaskEntry> findByUsernameAndCompleted(String username, boolean completed, Pageable pageable);
+public interface TaskEntryJpaActiveRepository extends CrudRepository<TaskActive, String> {
+	Page<TaskActive> findByUsernameAndCompleted( String username, boolean completed, Pageable pageable );
 }

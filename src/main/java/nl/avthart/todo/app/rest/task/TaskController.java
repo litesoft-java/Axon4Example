@@ -11,8 +11,8 @@ import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandModifyTitle;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandStar;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandUnstar;
-import nl.avthart.todo.app.query.task.TaskEntry;
-import nl.avthart.todo.app.query.task.TaskEntryRepository;
+import nl.avthart.todo.app.query.task.TaskActive;
+import nl.avthart.todo.app.query.task.TaskPrimaryProjectionRepository;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestCreate;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestModifyTitle;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -44,7 +44,7 @@ public class TaskController implements Endpoint.Controller {
 
     private final IdentifierFactory identifierFactory = IdentifierFactory.getInstance();
 
-    private final TaskEntryRepository taskEntryRepository;
+    private final TaskPrimaryProjectionRepository repo;
 
     private final SimpMessageSendingOperations messagingTemplate;
 
@@ -52,10 +52,10 @@ public class TaskController implements Endpoint.Controller {
 
     @GetMapping
     public @ResponseBody
-    Page<TaskEntry> findAll( Principal principal,
-                             @RequestParam(required = false, defaultValue = "false") boolean completed,
-                             Pageable pageable ) {
-        return taskEntryRepository.findByUsernameAndCompleted( principal.getName(), completed, pageable );
+    Page<TaskActive> findAll( Principal principal,
+                              @RequestParam(required = false, defaultValue = "false") boolean completed,
+                              Pageable pageable ) {
+        return repo.findActiveByUsernameAndCompleted( principal.getName(), completed, pageable );
     }
 
     @PostMapping
