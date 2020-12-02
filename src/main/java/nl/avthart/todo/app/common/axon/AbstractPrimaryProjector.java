@@ -4,6 +4,8 @@ import java.time.Instant;
 
 import lombok.RequiredArgsConstructor;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
+import nl.avthart.todo.app.common.exceptions.CantDeleteException;
+import nl.avthart.todo.app.common.exceptions.CantRestoreException;
 import nl.avthart.todo.app.common.exceptions.CantUpdateException;
 import nl.avthart.todo.app.common.exceptions.DeletedException;
 import nl.avthart.todo.app.common.exceptions.OptimisticLockException;
@@ -51,11 +53,7 @@ public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends Act
     }
 
     protected EntityActive checkHandlerUpdate( long nextVersion, Event<ID_Type> event ) {
-        EntityActive active = readActive( event );
-        if ( (active == null) || (active.getVersion() != (nextVersion - 1)) ) {
-            return null;
-        }
-        return active;
+        return checkHandlerActiveVersion( nextVersion, event );
     }
 
     protected void syncUpdate( Instant lastModifiedAt, EntityActive active ) {
@@ -68,10 +66,77 @@ public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends Act
         }
     }
 
+    // Delete Support
+    protected EntityActive checkSyncDelete( long currentVersion, Event<ID_Type> event ) {
+        EntityActive active = readActive( event );
+        if ( active == null ) {
+            boolean deleted = (null != readDeleted( event ));
+            if ( deleted ) {
+                throw new DeletedException( error( event, "is already deleted" ) );
+            }
+            throw new CantDeleteException( error( event, "does not currently exist" ) );
+        }
+        checkSyncUpdateVersion( currentVersion, active );
+        return active;
+    }
+
+    protected EntityActive checkHandlerDelete( long nextVersion, Event<ID_Type> event ) {
+        return checkHandlerActiveVersion( nextVersion, event );
+    }
+
+    protected void syncDelete( Instant lastModifiedAt, EntityActive active ) {
+        reportUnexpectedException( dbUpdate( active, () -> repo.delete( active, ensureInstant( lastModifiedAt ) ) ) ).run();
+    }
+
+    protected void handlerDelete( EntityActive active, Instant lastModifiedAt ) {
+        if ( active != null ) { // Allow Delete
+            reportAndSwallowException( dbUpdate( active, () -> repo.delete( active, ensureInstant( lastModifiedAt ) ) ) ).run();
+        }
+    }
+
+    // Restore Support
+    protected EntityDeleted checkSyncRestore( long currentVersion, Event<ID_Type> event ) {
+        EntityDeleted deleted = readDeleted( event );
+        if ( deleted == null ) {
+            boolean active = (null != readActive( event ));
+            throw new CantRestoreException( error( event, active ?
+                                                          "is currently active" :
+                                                          "does not currently exist" ) );
+        }
+        checkSyncUpdateVersion( currentVersion, deleted );
+        return deleted;
+    }
+
+    protected EntityDeleted checkHandlerRestore( long nextVersion, Event<ID_Type> event ) {
+        EntityDeleted deleted = readDeleted( event );
+        if ( (deleted == null) || (deleted.getVersion() != (nextVersion - 1)) ) {
+            return null;
+        }
+        return deleted;
+    }
+
+    protected void syncRestore( Instant lastModifiedAt, EntityDeleted delete ) {
+        reportUnexpectedException( dbUpdate( delete, () -> repo.restore( delete, ensureInstant( lastModifiedAt ) ) ) ).run();
+    }
+
+    protected void handlerRestore( EntityDeleted delete, Instant lastModifiedAt ) {
+        if ( delete != null ) { // Allow Restore
+            reportAndSwallowException( dbUpdate( delete, () -> repo.restore( delete, ensureInstant( lastModifiedAt ) ) ) ).run();
+        }
+    }
+
     // Support (Shared)
-    protected void checkSyncUpdateVersion( long currentVersion, EntityActive active ) {
-        if ( active.getVersion() != currentVersion ) {
-            throw versionError( active );
+    private EntityActive checkHandlerActiveVersion( long nextVersion, Event<ID_Type> event ) {
+        EntityActive active = readActive( event );
+        if ( (active == null) || (active.getVersion() != (nextVersion - 1)) ) {
+            return null;
+        }
+        return active;
+    }
+
+    protected void checkSyncUpdateVersion( long currentVersion, Projection<ID_Type> projection ) {
+        if ( projection.getVersion() != currentVersion ) {
+            throw versionError( projection );
         }
     }
 

@@ -4,9 +4,6 @@ import java.time.Instant;
 
 import nl.avthart.todo.app.common.axon.AbstractPrimaryProjector;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
-import nl.avthart.todo.app.common.exceptions.CantUpdateException;
-import nl.avthart.todo.app.common.exceptions.DeletedException;
-import nl.avthart.todo.app.domain.task.events.TaskEvent;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventDelete;
@@ -177,10 +174,9 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskA
         return task;
     }
 
-    // vvvvvvvvvvvv TODO: XXX
     public TaskEventDelete syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventDelete event ) {
         // Not currently Deleted (checked in Aggregate)
-        update( event, lastModifiedAt, checkSyncDelete( currentVersion, event ) );
+        syncDelete( lastModifiedAt, checkSyncDelete( currentVersion, event ) );
         return event;
     }
 
@@ -188,78 +184,31 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskA
     @EventHandler
     void on( TaskEventDelete event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
         // Don't know if Deleted, but if not in (Active) then assume deleted
-        update( event, createdAt, checkHandlerDelete( nextVersion, event ) );
-    }
-
-    @SuppressWarnings("unused")
-    private void update( TaskEventDelete event, Instant lastModifiedAt, TaskActive active ) {
+        TaskActive active = checkHandlerDelete( nextVersion, event );
+        // vvv Testing
         if ( active != null ) {
-            repo.delete( active, lastModifiedAt );
+            System.out.println( "************ Async: " + event.getClass().getSimpleName() );
         }
+        // ^^^ Testing
+        handlerDelete( active, createdAt );
     }
 
     public TaskEventRestore syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventRestore event ) {
-        update( event, lastModifiedAt, checkSyncRestore( currentVersion, event ) );
+        // Currently Deleted (checked in Aggregate)
+        syncRestore( lastModifiedAt, checkSyncRestore( currentVersion, event ) );
         return event;
     }
 
     @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventRestore event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
-        update( event, createdAt, checkHandlerRestore( nextVersion, event ) );
-    }
-
-    @SuppressWarnings("unused")
-    private void update( TaskEventRestore event, Instant lastModifiedAt, TaskDeleted deleted ) {
+        // Don't know if Deleted, but if it is then assume it should be restored
+        TaskDeleted deleted = checkHandlerRestore( nextVersion, event );
+        // vvv Testing
         if ( deleted != null ) {
-            repo.restore( deleted, lastModifiedAt );
+            System.out.println( "************ Async: " + event.getClass().getSimpleName() );
         }
-    }
-
-    // Support
-    private TaskActive checkSyncDelete( long currentVersion, TaskEvent event ) {
-        TaskActive task = readActive( event );
-        if ( task == null ) {
-            boolean deleted = (null != readDeleted( event ));
-            if ( deleted ) {
-                throw new DeletedException( "Task (" + event.getId() + ") is currently deleted" );
-            }
-            throw new CantUpdateException( "Task (" + event.getId() + ") to delete does not exist" );
-        }
-        checkSyncUpdateVersion( currentVersion, task );
-        return task;
-    }
-
-    private TaskActive checkHandlerDelete( long nextVersion, TaskEvent event ) {
-        TaskActive task = readActive( event );
-        if ( (task == null) || (task.getVersion() != (nextVersion - 1)) ) {
-            return null;
-        }
-        String type = event.getClass().getSimpleName();
-        System.out.println( "************ Async: " + type );
-        return task;
-    }
-
-    private TaskDeleted checkSyncRestore( long currentVersion, TaskEvent event ) {
-        TaskDeleted deleted = readDeleted( event );
-        if ( deleted == null ) {
-            boolean active = (null != readActive( event ));
-            if ( active ) {
-                throw new DeletedException( "Task (" + event.getId() + ") is currently active" );
-            }
-            throw new CantUpdateException( "Task (" + event.getId() + ") to restore does not exist" );
-        }
-        // TODO: xxx checkSyncUpdateVersion( currentVersion, deleted );
-        return deleted;
-    }
-
-    private TaskDeleted checkHandlerRestore( long nextVersion, TaskEvent event ) {
-        TaskDeleted task = readDeleted( event );
-        if ( (task == null) || (task.getVersion() != (nextVersion - 1)) ) {
-            return null;
-        }
-        String type = event.getClass().getSimpleName();
-        System.out.println( "************ Async: " + type );
-        return task;
+        // ^^^ Testing
+        handlerRestore( deleted, createdAt );
     }
 }
