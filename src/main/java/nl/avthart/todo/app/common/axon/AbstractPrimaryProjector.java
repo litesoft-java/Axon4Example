@@ -148,8 +148,8 @@ public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends Act
         return error( idSupplier.getId(), suffix );
     }
 
-    protected EntityActive readActive( Event<ID_Type> event ) {
-        return repo.findActiveById( event.getId() );
+    protected EntityActive readActive( IdSupplier<ID_Type> idSupplier ) {
+        return repo.findActiveById( idSupplier.getId() );
     }
 
     protected EntityDeleted readDeleted( Event<ID_Type> event ) {

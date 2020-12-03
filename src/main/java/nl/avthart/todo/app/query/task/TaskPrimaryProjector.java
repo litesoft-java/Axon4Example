@@ -4,6 +4,8 @@ import java.time.Instant;
 
 import nl.avthart.todo.app.common.axon.AbstractPrimaryProjector;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
+import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
+import nl.avthart.todo.app.domain.task.commands.TaskCommandLoad;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventDelete;
@@ -12,6 +14,8 @@ import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
 import nl.avthart.todo.app.flags.Monitor;
+import org.axonframework.commandhandling.CommandHandler;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.eventhandling.SequenceNumber;
 import org.axonframework.eventhandling.Timestamp;
@@ -20,8 +24,46 @@ import org.springframework.stereotype.Component;
 @Component
 public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskActive, TaskDeleted> {
 
-    public TaskPrimaryProjector( TaskPrimaryProjectionRepository repo ) {
+    private final CommandGateway commandGateway;
+
+    public TaskPrimaryProjector( TaskPrimaryProjectionRepository repo, CommandGateway commandGateway ) {
         super( repo, "Task" );
+        this.commandGateway = commandGateway;
+    }
+
+    /**
+     * Creates (Load) a new Task.
+     *
+     * @param command load Task
+     */
+    @SuppressWarnings("unused")
+    @CommandHandler
+    Object on( TaskCommandLoad command ) {
+        System.out.println( "TaskPrimaryProjector.on: " + command );
+        if ( command.getId() != null ) {
+            TaskActive active = readActive( command );
+            if ( active != null ) {
+                return null;
+            }
+        }
+        return commandGateway.sendAndWait( new TaskCommandCreate( command.getId(),
+                                                                  command.getUsername(),
+                                                                  command.getTitle() ) );
+    }
+
+    public Object syncProcess( TaskCommandLoad command ) {
+        if ( command.getId() != null ) {
+            TaskActive active = readActive( command );
+            if ( active != null ) {
+                return null;
+            }
+        }
+        TaskEventCreated event = new TaskEventCreated( command.getId(),
+                                                       command.getUsername(),
+                                                       command.getTitle() );
+        Instant createdAt = ensureInstant( null );
+        syncCreate( createdAt, event, map( event, createdAt ) );
+        return event;
     }
 
     public TaskEventCreated syncProcess( Instant createdAt, TaskEventCreated event ) {

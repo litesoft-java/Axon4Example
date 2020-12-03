@@ -28,8 +28,6 @@ import static org.axonframework.modelling.command.AggregateLifecycle.apply;
 
 /**
  * Task
- *
- * @author albert
  */
 @Aggregate
 public class TaskAggregate extends AbstractTaskEntry_v001 {
@@ -48,6 +46,9 @@ public class TaskAggregate extends AbstractTaskEntry_v001 {
 
     private boolean deleted; // defaults to false (appropriate value for create)
 
+    TaskAggregate() { // Required for rehydration
+    }
+
     /**
      * Creates a new Task.
      *
@@ -64,9 +65,6 @@ public class TaskAggregate extends AbstractTaskEntry_v001 {
                                              new TaskEventCreated( command.getId(),
                                                                    command.getUsername(),
                                                                    command.getTitle() ) ) );
-    }
-
-    TaskAggregate() { // Required for rehydration
     }
 
     /**
