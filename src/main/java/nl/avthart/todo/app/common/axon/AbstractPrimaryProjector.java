@@ -10,14 +10,16 @@ import nl.avthart.todo.app.common.exceptions.CantUpdateException;
 import nl.avthart.todo.app.common.exceptions.DeletedException;
 import nl.avthart.todo.app.common.exceptions.OptimisticLockException;
 import nl.avthart.todo.app.common.util.IdSupplier;
+import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.hibernate.StaleObjectStateException;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 @RequiredArgsConstructor
-public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends ActiveProjection<ID_Type>, EntityDeleted extends DeletedProjection<ID_Type>> implements PrimaryProjector {
+public abstract class AbstractPrimaryProjector<ID_Type, LoadCommand extends IdSupplier<ID_Type>, EntityActive extends ActiveProjection<ID_Type>, EntityDeleted extends DeletedProjection<ID_Type>> implements PrimaryProjector {
     protected final PrimaryProjectorRepository<ID_Type, EntityActive, EntityDeleted> repo;
+    private final CommandGateway commandGateway;
     private final String entityName;
 
     protected Instant ensureInstant( Instant instant ) {
@@ -126,6 +128,18 @@ public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends Act
     }
 
     // Support (Shared)
+    protected Object load( LoadCommand command, boolean overwrite ) {
+        EntityActive active = readActive( command );
+        Object nextCommand = (active == null) ?
+                             createCreateEvent( command ) :
+                             optionalUpdate( active, command, overwrite );
+        return (nextCommand == null) ? null : commandGateway.sendAndWait( nextCommand );
+    }
+
+    protected abstract Object createCreateEvent( LoadCommand command );
+
+    protected abstract Object optionalUpdate( EntityActive active, LoadCommand command, boolean overwrite );
+
     private EntityActive checkHandlerActiveVersion( long nextVersion, Event<ID_Type> event ) {
         EntityActive active = readActive( event );
         if ( (active == null) || (active.getVersion() != (nextVersion - 1)) ) {
@@ -145,15 +159,17 @@ public abstract class AbstractPrimaryProjector<ID_Type, EntityActive extends Act
     }
 
     protected String error( IdSupplier<ID_Type> idSupplier, String suffix ) {
-        return error( idSupplier.getId(), suffix );
+        return error( IdSupplier.resolve( idSupplier ), suffix );
     }
 
     protected EntityActive readActive( IdSupplier<ID_Type> idSupplier ) {
-        return repo.findActiveById( idSupplier.getId() );
+        ID_Type id = IdSupplier.resolve( idSupplier );
+        return (id == null) ? null : repo.findActiveById( id );
     }
 
-    protected EntityDeleted readDeleted( Event<ID_Type> event ) {
-        return repo.findDeletedById( event.getId() );
+    protected EntityDeleted readDeleted( IdSupplier<ID_Type> idSupplier ) {
+        ID_Type id = IdSupplier.resolve( idSupplier );
+        return (id == null) ? null : repo.findDeletedById( id );
     }
 
     protected OptimisticLockException versionError( IdSupplier<ID_Type> idSupplier, Throwable... cause ) {

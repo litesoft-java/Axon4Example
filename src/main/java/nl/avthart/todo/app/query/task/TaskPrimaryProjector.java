@@ -4,8 +4,10 @@ import java.time.Instant;
 
 import nl.avthart.todo.app.common.axon.AbstractPrimaryProjector;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
+import nl.avthart.todo.app.domain.task.commands.AbstractTaskCommandLoad;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandLoad;
+import nl.avthart.todo.app.domain.task.commands.TaskCommandLoadOverwrite;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
 import nl.avthart.todo.app.domain.task.events.TaskEventDelete;
@@ -22,13 +24,10 @@ import org.axonframework.eventhandling.Timestamp;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskActive, TaskDeleted> {
-
-    private final CommandGateway commandGateway;
+public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, AbstractTaskCommandLoad, TaskActive, TaskDeleted> {
 
     public TaskPrimaryProjector( TaskPrimaryProjectionRepository repo, CommandGateway commandGateway ) {
-        super( repo, "Task" );
-        this.commandGateway = commandGateway;
+        super( repo, commandGateway, "Task" );
     }
 
     /**
@@ -39,31 +38,33 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskA
     @SuppressWarnings("unused")
     @CommandHandler
     Object on( TaskCommandLoad command ) {
-        System.out.println( "TaskPrimaryProjector.on: " + command );
-        if ( command.getId() != null ) {
-            TaskActive active = readActive( command );
-            if ( active != null ) {
-                return null;
-            }
-        }
-        return commandGateway.sendAndWait( new TaskCommandCreate( command.getId(),
-                                                                  command.getUsername(),
-                                                                  command.getTitle() ) );
+        System.out.println( "************ TaskPrimaryProjector.on: " + command );
+        return load(command, false);
     }
 
-    public Object syncProcess( TaskCommandLoad command ) {
-        if ( command.getId() != null ) {
-            TaskActive active = readActive( command );
-            if ( active != null ) {
-                return null;
-            }
-        }
-        TaskEventCreated event = new TaskEventCreated( command.getId(),
-                                                       command.getUsername(),
-                                                       command.getTitle() );
-        Instant createdAt = ensureInstant( null );
-        syncCreate( createdAt, event, map( event, createdAt ) );
-        return event;
+    /**
+     * Creates (Load) a new Task.
+     *
+     * @param command load Task
+     */
+    @SuppressWarnings("unused")
+    @CommandHandler
+    Object on( TaskCommandLoadOverwrite command ) {
+        System.out.println( "************ TaskPrimaryProjector.on: " + command );
+        return load(command, true);
+    }
+
+    @Override
+    protected Object createCreateEvent( AbstractTaskCommandLoad command ) {
+        return new TaskCommandCreate( command.getId(),
+                                      command.getUsername(),
+                                      command.getTitle() );
+    }
+
+    @Override
+    protected Object optionalUpdate( TaskActive active, AbstractTaskCommandLoad command, boolean overwrite ) {
+        // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        return null; // TODO: XXX
     }
 
     public TaskEventCreated syncProcess( Instant createdAt, TaskEventCreated event ) {

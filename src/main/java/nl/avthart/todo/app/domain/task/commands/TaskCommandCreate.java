@@ -2,25 +2,21 @@ package nl.avthart.todo.app.domain.task.commands;
 
 import javax.validation.constraints.NotNull;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Value;
+import org.axonframework.modelling.command.TargetAggregateIdentifier;
 
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-@Getter
-public class TaskCommandCreate extends TaskCommand {
+@Value
+@Builder
+@AllArgsConstructor
+public class TaskCommandCreate implements TaskCommand {
+    @TargetAggregateIdentifier
+    String id;
+
     @NotNull
-    private final String username;
+    String username;
 
     @NotNull
-    private final String title;
-
-    @Builder
-    public TaskCommandCreate( String id, String username, String title ) {
-        super( id );
-        this.username = username;
-        this.title = title;
-    }
+    String title;
 }

@@ -1,12 +1,10 @@
 package nl.avthart.todo.app.domain.task.commands;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.Value;
+import org.axonframework.modelling.command.TargetAggregateIdentifier;
 
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-public class TaskCommandUnstar extends TaskCommand {
-    public TaskCommandUnstar( String id ) {
-        super( id );
-    }
+@Value
+public class TaskCommandUnstar implements TaskCommand {
+    @TargetAggregateIdentifier
+    String id;
 }
