@@ -17,7 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 @RequiredArgsConstructor
-public abstract class AbstractPrimaryProjector<ID_Type, LoadCommand extends IdSupplier<ID_Type>, EntityActive extends ActiveProjection<ID_Type>, EntityDeleted extends DeletedProjection<ID_Type>> implements PrimaryProjector {
+public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSupplier<ID_Type>, LoadCommand extends IdSupplier<ID_Type>, EntityActive extends ActiveProjection<ID_Type>, EntityDeleted extends DeletedProjection<ID_Type>> implements PrimaryProjector {
     protected final PrimaryProjectorRepository<ID_Type, EntityActive, EntityDeleted> repo;
     private final CommandGateway commandGateway;
     private final String entityName;
@@ -128,17 +128,35 @@ public abstract class AbstractPrimaryProjector<ID_Type, LoadCommand extends IdSu
     }
 
     // Support (Shared)
-    protected Object load( LoadCommand command, boolean overwrite ) {
-        EntityActive active = readActive( command );
-        Object nextCommand = (active == null) ?
-                             createCreateEvent( command ) :
-                             optionalUpdate( active, command, overwrite );
-        return (nextCommand == null) ? null : commandGateway.sendAndWait( nextCommand );
+    protected <T> T loadUpdateField( T existingValue, T newValue ) {
+        if ( newValue == null ) {
+            return existingValue;
+        }
+        if ( (existingValue != null) && (newValue instanceof String) // Left to Right!
+             && newValue.toString().trim().isEmpty() ) {
+            return existingValue;
+        }
+        return newValue;
     }
 
-    protected abstract Object createCreateEvent( LoadCommand command );
+    protected Object load( LoadCommand command, boolean overwrite ) {
+        if (command == null) {
+            throw new NullPointerException( "No LoadCommand" );
+        }
+        EntityActive active = readActive( command );
+        Command nextCommand = (active == null) ?
+                             createCreateCommand( command ) :
+                             optionalUpdateCommand( active, command, overwrite );
+        if ( nextCommand == null ) {
+            return null;
+        }
+        Object rv = commandGateway.sendAndWait( nextCommand );
+        return (rv != null) ? rv : command.getId();
+    }
 
-    protected abstract Object optionalUpdate( EntityActive active, LoadCommand command, boolean overwrite );
+    protected abstract Command createCreateCommand( LoadCommand command );
+
+    protected abstract Command optionalUpdateCommand( EntityActive active, LoadCommand command, boolean overwrite );
 
     private EntityActive checkHandlerActiveVersion( long nextVersion, Event<ID_Type> event ) {
         EntityActive active = readActive( event );

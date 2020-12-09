@@ -8,17 +8,20 @@ import nl.avthart.todo.app.domain.task.commands.TaskCommandModifyTitle;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandRestore;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandStar;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandUnstar;
+import nl.avthart.todo.app.domain.task.commands.TaskCommandUpdate;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
-import nl.avthart.todo.app.domain.task.events.TaskEventDelete;
-import nl.avthart.todo.app.domain.task.events.TaskEventRestore;
+import nl.avthart.todo.app.domain.task.events.TaskEventDeleted;
+import nl.avthart.todo.app.domain.task.events.TaskEventRestored;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
+import nl.avthart.todo.app.domain.task.events.TaskEventUpdated;
 import nl.avthart.todo.app.flags.Monitor;
 import nl.avthart.todo.app.query.task.AbstractTaskEntry_v001;
 import nl.avthart.todo.app.query.task.TaskPrimaryProjector;
 import org.axonframework.commandhandling.CommandHandler;
+import org.axonframework.common.IdentifierFactory;
 import org.axonframework.eventhandling.SequenceNumber;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
@@ -57,14 +60,31 @@ public class TaskAggregate extends AbstractTaskEntry_v001 {
      */
     @CommandHandler
     public TaskAggregate( TaskCommandCreate command, TaskPrimaryProjector primaryProjector ) {
+        // vvv Testing
         if ( "BadCmdTask".equals( command.getTitle() ) ) {
             throw new IllegalArgumentException( "TaskAggregate (command): BadCmdTask" );
         }
         Monitor.show();
+        // ^^^ Testing
+        String id = command.getId();
+        if (id == null) {
+            id = IdentifierFactory.getInstance().generateIdentifier();
+        }
         apply( primaryProjector.syncProcess( null,
-                                             new TaskEventCreated( command.getId(),
-                                                                   command.getUsername(),
-                                                                   command.getTitle() ) ) );
+                                             new TaskEventCreated( id, command ) ) );
+    }
+
+    /**
+     * Update (load/overwrite) a Task.
+     *
+     * @param command          update Task
+     * @param primaryProjector support syncProcess of the the converted (to event) command
+     */
+    @SuppressWarnings("unused")
+    @CommandHandler
+    void on( TaskCommandUpdate command, TaskPrimaryProjector primaryProjector ) {
+        apply( primaryProjector.syncProcess( version, null,
+                                             new TaskEventUpdated( command.getId(), command ) ) );
     }
 
     /**
@@ -137,7 +157,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 {
             throw new AlreadyDeletedException( "Task [ identifier = " + id + " ] is already deleted." );
         }
         apply( primaryProjector.syncProcess( version, null,
-                                             new TaskEventDelete( command.getId() ) ) );
+                                             new TaskEventDeleted( command.getId() ) ) );
     }
 
     /**
@@ -153,16 +173,27 @@ public class TaskAggregate extends AbstractTaskEntry_v001 {
             throw new AlreadyDeletedException( "Task [ identifier = " + id + " ] is not deleted." );
         }
         apply( primaryProjector.syncProcess( version, null,
-                                             new TaskEventRestore( command.getId() ) ) );
+                                             new TaskEventRestored( command.getId() ) ) );
     }
 
     @SuppressWarnings("unused")
     @EventSourcingHandler
     void on( TaskEventCreated event ) {
+        // vvv Testing
         Monitor.show();
+        // ^^^ Testing
         id = event.getId();
+        completed = event.isCompleted();
         // event.getUsername() not persisted in this Aggregate
         // event.getTitle() not persisted in this Aggregate
+    }
+
+    @SuppressWarnings("unused")
+    @EventSourcingHandler
+    void on( TaskEventUpdated event, @SequenceNumber long version ) {
+        this.version = version;
+        this.completed = event.isCompleted();
+        // Other fields not persisted in this Aggregate
     }
 
     @SuppressWarnings("unused")
@@ -195,14 +226,14 @@ public class TaskAggregate extends AbstractTaskEntry_v001 {
 
     @SuppressWarnings("unused")
     @EventSourcingHandler
-    void on( TaskEventDelete event, @SequenceNumber long version ) {
+    void on( TaskEventDeleted event, @SequenceNumber long version ) {
         this.version = version;
         deleted = true;
     }
 
     @SuppressWarnings("unused")
     @EventSourcingHandler
-    void on( TaskEventRestore event, @SequenceNumber long version ) {
+    void on( TaskEventRestored event, @SequenceNumber long version ) {
         this.version = version;
         deleted = false;
     }

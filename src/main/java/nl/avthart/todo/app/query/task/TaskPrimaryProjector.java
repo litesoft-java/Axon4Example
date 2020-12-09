@@ -3,18 +3,23 @@ package nl.avthart.todo.app.query.task;
 import java.time.Instant;
 
 import nl.avthart.todo.app.common.axon.AbstractPrimaryProjector;
+import nl.avthart.todo.app.common.axon.Event;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
+import nl.avthart.todo.app.common.exceptions.CantUpdateException;
 import nl.avthart.todo.app.domain.task.commands.AbstractTaskCommandLoad;
+import nl.avthart.todo.app.domain.task.commands.TaskCommand;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandLoad;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandLoadOverwrite;
+import nl.avthart.todo.app.domain.task.commands.TaskCommandUpdate;
 import nl.avthart.todo.app.domain.task.events.TaskEventCompleted;
 import nl.avthart.todo.app.domain.task.events.TaskEventCreated;
-import nl.avthart.todo.app.domain.task.events.TaskEventDelete;
-import nl.avthart.todo.app.domain.task.events.TaskEventRestore;
+import nl.avthart.todo.app.domain.task.events.TaskEventDeleted;
+import nl.avthart.todo.app.domain.task.events.TaskEventRestored;
 import nl.avthart.todo.app.domain.task.events.TaskEventStarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
+import nl.avthart.todo.app.domain.task.events.TaskEventUpdated;
 import nl.avthart.todo.app.flags.Monitor;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -24,7 +29,7 @@ import org.axonframework.eventhandling.Timestamp;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, AbstractTaskCommandLoad, TaskActive, TaskDeleted> {
+public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskCommand, AbstractTaskCommandLoad, TaskActive, TaskDeleted> {
 
     public TaskPrimaryProjector( TaskPrimaryProjectionRepository repo, CommandGateway commandGateway ) {
         super( repo, commandGateway, "Task" );
@@ -39,7 +44,7 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
     @CommandHandler
     Object on( TaskCommandLoad command ) {
         System.out.println( "************ TaskPrimaryProjector.on: " + command );
-        return load(command, false);
+        return load( command, false );
     }
 
     /**
@@ -51,22 +56,34 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
     @CommandHandler
     Object on( TaskCommandLoadOverwrite command ) {
         System.out.println( "************ TaskPrimaryProjector.on: " + command );
-        return load(command, true);
+        return load( command, true );
     }
 
     @Override
-    protected Object createCreateEvent( AbstractTaskCommandLoad command ) {
-        return new TaskCommandCreate( command.getId(),
+    protected TaskCommand createCreateCommand( AbstractTaskCommandLoad command ) {
+        return new TaskCommandCreate( command.getId(), command );
+    }
+
+    @Override
+    protected TaskCommand optionalUpdateCommand( TaskActive active, AbstractTaskCommandLoad command, boolean overwrite ) {
+        command.setCreatedHour( loadUpdateField( active.getCreatedHour(), command.getCreatedHour() ) );
+        command.setUsername( loadUpdateField( active.getUsername(), command.getUsername() ) );
+        command.setTitle( loadUpdateField( active.getTitle(), command.getTitle() ) );
+        if ( active.isEquivalent( command ) ) {
+            return null; // No change needed
+        }
+        if ( !overwrite ) {
+            throw new CantUpdateException( error( active, active.delta( command ) ) );
+        }
+        return new TaskCommandUpdate( active.getId(),
+                                      command.getCreatedHour(),
                                       command.getUsername(),
-                                      command.getTitle() );
+                                      command.getTitle(),
+                                      command.isCompleted(),
+                                      command.isStarred() );
     }
 
-    @Override
-    protected Object optionalUpdate( TaskActive active, AbstractTaskCommandLoad command, boolean overwrite ) {
-        // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        return null; // TODO: XXX
-    }
-
+    // Created
     public TaskEventCreated syncProcess( Instant createdAt, TaskEventCreated event ) {
         // vvv Testing
         if ( "BadTask".equals( event.getTitle() ) ) {
@@ -90,21 +107,38 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
         return new TaskActive( TaskEntity.builder()
                                        .id( event.getId() )
                                        .version( 0L )
-                                       .createdHour( toHour( createdAt ) )
+                                       .createdHour( loadUpdateField( event.getCreatedHour(), toHour( createdAt ) ) )
                                        .username( event.getUsername() )
                                        .title( event.getTitle() )
-                                       .completed( false )
-                                       .starred( false )
+                                       .completed( event.isCompleted() )
+                                       .starred( event.isStarred() )
                                        .build() );
     }
 
-    private String toHour( Instant instant ) {
-        // 2020-11-19T13Z
-        // 01234567-10123
-        // 2020-11-19T13:12:11.101Z
-        return instant.toString().substring( 0, 13 ) + "Z";
+    // Updated
+    public TaskEventUpdated syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventUpdated event ) {
+        syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( currentVersion, event ) ) );
+        return event;
     }
 
+    @SuppressWarnings("unused")
+    @EventHandler
+    void on( TaskEventUpdated event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
+        handlerUpdate( map( event, checkHandlerUpdate( nextVersion, event ) ), createdAt );
+    }
+
+    private TaskActive map( TaskEventUpdated event, TaskActive task ) {
+        if ( task != null ) {
+            task.setCreatedHour( loadUpdateField( task.getCreatedHour(), event.getCreatedHour() ) );
+            task.setUsername( event.getUsername() );
+            task.setTitle( event.getTitle() );
+            task.setCompleted( event.isCompleted() );
+            task.setStarred( event.isStarred() );
+        }
+        return task;
+    }
+
+    // Starred
     public TaskEventStarred syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventStarred event ) {
         syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( currentVersion, event ) ) );
         return event;
@@ -113,13 +147,7 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
     @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventStarred event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
-        TaskActive active = checkHandlerUpdate( nextVersion, event );
-        // vvv Testing
-        if ( active != null ) {
-            System.out.println( "************ Async: " + event.getClass().getSimpleName() );
-        }
-        // ^^^ Testing
-        handlerUpdate( map( event, active ), createdAt );
+        handlerUpdate( map( event, checkHandlerUpdate( nextVersion, event ) ), createdAt );
     }
 
     @SuppressWarnings("unused")
@@ -144,13 +172,7 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
     @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventUnstarred event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
-        TaskActive active = checkHandlerUpdate( nextVersion, event );
-        // vvv Testing
-        if ( active != null ) {
-            System.out.println( "************ Async: " + event.getClass().getSimpleName() );
-        }
-        // ^^^ Testing
-        handlerUpdate( map( event, active ), createdAt );
+        handlerUpdate( map( event, checkHandlerUpdate( nextVersion, event ) ), createdAt );
     }
 
     @SuppressWarnings("unused")
@@ -175,13 +197,7 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
     @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventTitleModified event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
-        TaskActive active = checkHandlerUpdate( nextVersion, event );
-        // vvv Testing
-        if ( active != null ) {
-            System.out.println( "************ Async: " + event.getClass().getSimpleName() );
-        }
-        // ^^^ Testing
-        handlerUpdate( map( event, active ), createdAt );
+        handlerUpdate( map( event, checkHandlerUpdate( nextVersion, event ) ), createdAt );
     }
 
     private TaskActive map( TaskEventTitleModified event, TaskActive task ) {
@@ -199,13 +215,7 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
     @SuppressWarnings("unused")
     @EventHandler
     void on( TaskEventCompleted event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
-        TaskActive active = checkHandlerUpdate( nextVersion, event );
-        // vvv Testing
-        if ( active != null ) {
-            System.out.println( "************ Async: " + event.getClass().getSimpleName() );
-        }
-        // ^^^ Testing
-        handlerUpdate( map( event, active ), createdAt );
+        handlerUpdate( map( event, checkHandlerUpdate( nextVersion, event ) ), createdAt );
     }
 
     @SuppressWarnings("unused")
@@ -216,7 +226,7 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
         return task;
     }
 
-    public TaskEventDelete syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventDelete event ) {
+    public TaskEventDeleted syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventDeleted event ) {
         // Not currently Deleted (checked in Aggregate)
         syncDelete( lastModifiedAt, checkSyncDelete( currentVersion, event ) );
         return event;
@@ -224,18 +234,12 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
 
     @SuppressWarnings("unused")
     @EventHandler
-    void on( TaskEventDelete event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
+    void on( TaskEventDeleted event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
         // Don't know if Deleted, but if not in (Active) then assume deleted
-        TaskActive active = checkHandlerDelete( nextVersion, event );
-        // vvv Testing
-        if ( active != null ) {
-            System.out.println( "************ Async: " + event.getClass().getSimpleName() );
-        }
-        // ^^^ Testing
-        handlerDelete( active, createdAt );
+        handlerDelete( checkHandlerDelete( nextVersion, event ), createdAt );
     }
 
-    public TaskEventRestore syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventRestore event ) {
+    public TaskEventRestored syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventRestored event ) {
         // Currently Deleted (checked in Aggregate)
         syncRestore( lastModifiedAt, checkSyncRestore( currentVersion, event ) );
         return event;
@@ -243,14 +247,38 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, Abstr
 
     @SuppressWarnings("unused")
     @EventHandler
-    void on( TaskEventRestore event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
+    void on( TaskEventRestored event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
         // Don't know if Deleted, but if it is then assume it should be restored
-        TaskDeleted deleted = checkHandlerRestore( nextVersion, event );
-        // vvv Testing
-        if ( deleted != null ) {
+        handlerRestore( checkHandlerRestore( nextVersion, event ), createdAt );
+    }
+
+    private String toHour( Instant instant ) {
+        // 2020-11-19T13Z
+        // 01234567-10123
+        // 2020-11-19T13:12:11.101Z
+        return instant.toString().substring( 0, 13 ) + "Z";
+    }
+
+    // vvv Testing
+    @Override
+    protected TaskActive checkHandlerUpdate( long nextVersion, Event<String> event ) {
+        return showAsync( event, super.checkHandlerUpdate( nextVersion, event ) );
+    }
+
+    @Override
+    protected TaskActive checkHandlerDelete( long nextVersion, Event<String> event ) {
+        return showAsync( event, super.checkHandlerDelete( nextVersion, event ) );
+    }
+
+    @Override
+    protected TaskDeleted checkHandlerRestore( long nextVersion, Event<String> event ) {
+        return showAsync( event, super.checkHandlerRestore( nextVersion, event ) );
+    }
+
+    private <T extends TaskEntity> T showAsync( Event<String> event, T entity ) {
+        if ( entity != null ) {
             System.out.println( "************ Async: " + event.getClass().getSimpleName() );
         }
-        // ^^^ Testing
-        handlerRestore( deleted, createdAt );
+        return entity;
     }
 }

@@ -3,9 +3,11 @@ package nl.avthart.todo.app.rest.task;
 import java.util.Arrays;
 import java.util.List;
 
+import nl.avthart.todo.app.common.exceptions.CantUpdateException;
+import nl.avthart.todo.app.domain.task.commands.AbstractTaskCommandLoad;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandLoad;
+import nl.avthart.todo.app.domain.task.commands.TaskCommandLoadOverwrite;
 import nl.avthart.todo.app.query.task.TaskActive;
-import nl.avthart.todo.app.rest.task.requests.TaskRequestCreate;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.common.IdentifierFactory;
 import org.junit.Test;
@@ -35,6 +37,7 @@ public class TaskLoadTest {
     public void scenarios() {
         String title = "Meeting";
 
+        // Optional Load - first time -> create
         TaskCommandLoad loadCommand = TaskCommandLoad.builder()
                 .id( identifierFactory.generateIdentifier() )
                 .username( USER )
@@ -43,45 +46,104 @@ public class TaskLoadTest {
 
         Object rv = commandGateway.sendAndWait( loadCommand );
 
-        TaskActive task = get( 1 );
+        assertEquals( loadCommand.getId(), rv );
 
-        handler.create( USER, TaskRequestCreate.builder()
-                .title( title + "-2" )
-                .build() );
+        TaskActive task = get( false, 1 );
 
-        TaskActive task2 = get( 2, task.getId() );
+        checkExpected( loadCommand, task );
 
-        System.out.println( "************ " + rv + ":\n" + task + "\n" + task2 );
-
+        // Optional Load already there
         rv = commandGateway.sendAndWait( loadCommand );
 
         assertNull( rv );
 
-        //    handler.star( taskId );
-        //    checkTask( get( false, 1 ),
-        //               1, true, title, false );
-        //
-        //    title += " Meeting";
-        //    handler.modifyTitle( taskId, TaskRequestModifyTitle.builder()
-        //            .title( title )
-        //            .build() );
-        //    checkTask( get( false, 1 ),
-        //               2, true, title, false );
-        //
-        //    handler.delete( taskId );
-        //    get( false, 0 );
-        //
-        //    handler.restore( taskId );
-        //    checkTask( get( false, 1 ),
-        //               4, true, title, false );
-        //
-        //    handler.complete( taskId );
-        //    checkTask( get( true, 1 ),
-        //               5, true, title, true );
+        // Optional Overwrite Load already there
+        TaskCommandLoadOverwrite overwrite = TaskCommandLoadOverwrite.builder()
+                .id( loadCommand.getId() )
+                .username( loadCommand.getUsername() )
+                .title( loadCommand.getTitle() )
+                .starred( loadCommand.isStarred() )
+                .completed( loadCommand.isCompleted() )
+                .build();
+
+        rv = commandGateway.sendAndWait( overwrite );
+
+        assertNull( rv );
+
+        // Optional Load w/o Overwrite but different!
+        loadCommand.setTitle( title + "-2" );
+
+        try {
+            rv = commandGateway.sendAndWait( loadCommand );
+            fail( "Non-overwrite, but succeeded with rv: " + rv );
+        }
+        catch ( CantUpdateException expected ) {
+            // Ignore
+        }
+
+        // Optional Overwrite Load - with replace preexisting load
+        overwrite = TaskCommandLoadOverwrite.builder()
+                .id( task.getId() )
+                .username( USER )
+                .title( title + "-2" )
+                .starred( true )
+                .completed( true )
+                .build();
+
+        rv = commandGateway.sendAndWait( overwrite );
+
+        assertEquals( overwrite.getId(), rv );
+
+        task = get( true, 1 );
+
+        checkExpected( overwrite, task );
+
+        // Optional Overwrite Load - create
+        overwrite = TaskCommandLoadOverwrite.builder()
+                .id( identifierFactory.generateIdentifier() )
+                .username( USER )
+                .title( title + "-3" )
+                .build();
+
+        rv = commandGateway.sendAndWait( overwrite );
+
+        assertEquals( overwrite.getId(), rv );
+
+        task = get( false, 1 );
+
+        checkExpected( overwrite, task );
+
+        // Optional Load - first time -> create - No ID
+        loadCommand = TaskCommandLoad.builder()
+                .username( USER )
+                .title( title + "-4" )
+                .build();
+
+        rv = commandGateway.sendAndWait( loadCommand );
+
+        assertNotNull( rv ); // ID
+
+        task = get( false, 2, overwrite.getId() );
+
+        loadCommand.setId(rv.toString()); // ID
+
+        checkExpected( loadCommand, task );
     }
 
-    private TaskActive get( int expected, String... skipIds ) {
-        Page<TaskActive> page = handler.findAll( USER, false, null );
+    private void checkExpected( AbstractTaskCommandLoad command, TaskActive task ) {
+        assertEquals( command.getId(), task.getId() );
+
+        if (command.getCreatedHour() == null) {
+            command.setCreatedHour( task.getCreatedHour() );
+        }
+
+        if ( !command.isEquivalent( task ) ) {
+            fail( command.delta( task ) );
+        }
+    }
+
+    private TaskActive get( boolean completed, int expected, String... skipIds ) {
+        Page<TaskActive> page = handler.findAll( USER, completed, null );
         assertNotNull( page );
         List<TaskActive> tasks = page.getContent();
         assertNotNull( tasks );
@@ -92,7 +154,7 @@ public class TaskLoadTest {
             }
             List<String> skipIdCollection = Arrays.asList( skipIds );
             for ( TaskActive task : tasks ) {
-                if (!skipIdCollection.contains( task.getId() )) {
+                if ( !skipIdCollection.contains( task.getId() ) ) {
                     return task;
                 }
             }

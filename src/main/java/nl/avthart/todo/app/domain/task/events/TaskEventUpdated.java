@@ -7,10 +7,10 @@ import nl.avthart.todo.app.query.task.AbstractTaskEntry_v001;
 
 @NoArgsConstructor
 @ToString(callSuper = true)
-public class TaskEventCreated extends AbstractAllFieldsTaskEvent implements TaskEvent {
+public class TaskEventUpdated extends AbstractAllFieldsTaskEvent implements TaskEvent {
     @SuppressWarnings("unused")
     @Builder
-    public TaskEventCreated( String id,
+    public TaskEventUpdated( String id,
                              String createdHour,
                              String username,
                              String title,
@@ -19,7 +19,7 @@ public class TaskEventCreated extends AbstractAllFieldsTaskEvent implements Task
         super( id, createdHour, username, title, completed, starred );
     }
 
-    public TaskEventCreated( String id, AbstractTaskEntry_v001 fields ) {
+    public TaskEventUpdated( String id, AbstractTaskEntry_v001 fields ) {
         super( id, fields );
     }
 }

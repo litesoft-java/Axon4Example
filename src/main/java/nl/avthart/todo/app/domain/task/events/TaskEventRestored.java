@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TaskEventRestore implements TaskEvent {
+public class TaskEventRestored implements TaskEvent {
 
     String id;
 }

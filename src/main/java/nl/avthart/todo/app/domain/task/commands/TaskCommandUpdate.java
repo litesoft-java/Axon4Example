@@ -5,10 +5,9 @@ import lombok.ToString;
 import nl.avthart.todo.app.query.task.AbstractTaskEntry_v001;
 
 @ToString(callSuper = true)
-public class TaskCommandCreate extends AbstractAllFieldsTaskCommand {
-    @SuppressWarnings("unused")
+public class TaskCommandUpdate extends AbstractAllFieldsTaskCommand {
     @Builder
-    public TaskCommandCreate( String id,
+    public TaskCommandUpdate( String id,
                               String createdHour,
                               String username,
                               String title,
@@ -17,7 +16,7 @@ public class TaskCommandCreate extends AbstractAllFieldsTaskCommand {
         super( id, createdHour, username, title, completed, starred );
     }
 
-    public TaskCommandCreate( String id, AbstractTaskEntry_v001 fields ) {
+    public TaskCommandUpdate( String id, AbstractTaskEntry_v001 fields ) {
         super( id, fields );
     }
 }
