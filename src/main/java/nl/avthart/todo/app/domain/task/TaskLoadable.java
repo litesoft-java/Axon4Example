@@ -8,12 +8,21 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TaskLoadable implements Loadable<TaskCommandLoad> {
+    static final String LOADED = "loaded";
+
     enum field {
+        id {
+            @Override
+            @SuppressWarnings("unchecked")
+            String convert( Object value ) {
+                return Loadable.asString( value, name() ); // Optional
+            }
+        },
         username {
             @Override
             @SuppressWarnings("unchecked")
             String convert( Object value ) {
-                return Loadable.defaultString(Loadable.asString( value, name() ), "loaded");
+                return Loadable.defaultString( Loadable.asString( value, name() ), LOADED );
             }
         },
         createdHour {
@@ -45,7 +54,7 @@ public class TaskLoadable implements Loadable<TaskCommandLoad> {
             }
         };
 
-        <T> T from(Map<String, ?> map) {
+        <T> T from( Map<String, ?> map) {
             return convert( map.get( name() ) );
         }
 
