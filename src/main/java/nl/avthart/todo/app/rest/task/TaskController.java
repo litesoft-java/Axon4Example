@@ -43,7 +43,8 @@ public class TaskController implements Endpoint.Controller {
     @PostMapping
     @ResponseStatus(value = HttpStatus.CREATED)
     public void create( Principal principal, @RequestBody @Valid TaskRequestCreate request ) {
-        handler.create( principal.getName(), request );
+        String id = handler.create( principal.getName(), request );
+        System.out.println( "TaskController.create (id, should add location header): " + id );
     }
 
     @PostMapping("/{identifier}/title") // IMO: should be PATCH, but not supported by current Angular version

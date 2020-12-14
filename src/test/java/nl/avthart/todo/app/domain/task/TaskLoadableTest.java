@@ -1,15 +1,13 @@
 package nl.avthart.todo.app.domain.task;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import nl.avthart.todo.app.AbstractTaskTestSupport;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandLoad;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-class TaskLoadableTest {
+class TaskLoadableTest extends AbstractTaskTestSupport {
     private static final TaskLoadable LOADABLE = new TaskLoadable();
 
     @Test
@@ -91,27 +89,5 @@ class TaskLoadableTest {
 
     private void check( TaskCommandLoad actual, TaskCommandLoad expected ) {
         assertEquals( expected, actual );
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static Map<String, ?> populate( Object... keyValues ) {
-        Map map = new HashMap<>();
-        if ( keyValues != null ) {
-            if ( (keyValues.length & 1) == 1 ) { // odd number of keyValues?
-                throw new IllegalArgumentException( "Missing Value for key: " + keyValues[keyValues.length - 1] );
-            }
-            for ( int i = 0; i < keyValues.length; i += 2 ) {
-                Object key = keyValues[i];
-                if ( !(key instanceof String) ) {
-                    throw new IllegalArgumentException( "keyValues[" + i + "] not a string (" +
-                                                        ((key == null) ? "null" : key.getClass().getSimpleName()) + "): " + key );
-                }
-                Object value = keyValues[i + 1];
-                if ( value != null ) {
-                    map.put( key, value );
-                }
-            }
-        }
-        return (Map<String, ?>)map;
     }
 }

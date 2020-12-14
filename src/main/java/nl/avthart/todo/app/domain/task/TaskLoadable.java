@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TaskLoadable implements Loadable<TaskCommandLoad> {
-    static final String LOADED = "loaded";
+    public static final String LOADED = "loaded";
 
     enum field {
         id {
@@ -68,6 +68,7 @@ public class TaskLoadable implements Loadable<TaskCommandLoad> {
     @Override
     public TaskCommandLoad createCommand( Map<String, ?> map ) {
         return TaskCommandLoad.builder()
+                .id( field.id.from(map) )
                 .username( field.username.from(map) )
                 .createdHour( field.createdHour.from(map) )
                 .title( field.title.from(map) )

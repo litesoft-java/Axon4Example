@@ -1,6 +1,7 @@
 package nl.avthart.todo.app.domain.load;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,19 +46,27 @@ public class Loader {
             loaded.add( new SuccessPair( id, what ) );
         }
 
+        public List<String> getErrors() {
+            return Collections.unmodifiableList( errors );
+        }
+
+        public List<SuccessPair> getLoaded() {
+            return Collections.unmodifiableList( loaded );
+        }
+
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder().append( "Loader:" );
             if ( !errors.isEmpty() ) {
-                sb.append( "Errors:\n" );
+                sb.append( "\n   Errors:" );
                 for ( String error : errors ) {
-                    sb.append( "   " ).append( error );
+                    sb.append( "\n      " ).append( error );
                 }
             }
             if ( !loaded.isEmpty() ) {
-                sb.append( "loaded:\n" );
+                sb.append( "\n   loaded:" );
                 for ( SuccessPair pair : loaded ) {
-                    sb.append( "   " ).append( pair );
+                    sb.append( "\n      " ).append( pair );
                 }
             }
             return sb.toString();
@@ -96,7 +105,7 @@ public class Loader {
                     result.addSuccess( id, map.toString() );
                 }
                 catch ( RuntimeException e ) {
-                    result.addError( "Problem type '" + key + "' - " + map + " - " + e.getMessage() );
+                    result.addError( "Problem type '" + key + "' - " + map + " - (" + e.getClass().getSimpleName() + "): " + e.getMessage() );
                 }
             }
         }

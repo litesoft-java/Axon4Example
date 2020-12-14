@@ -1,8 +1,6 @@
 package nl.avthart.todo.app.rest.task;
 
-import java.util.Arrays;
-import java.util.List;
-
+import nl.avthart.todo.app.AbstractTaskTestSupport;
 import nl.avthart.todo.app.common.exceptions.CantUpdateException;
 import nl.avthart.todo.app.domain.task.commands.AbstractTaskCommandLoad;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandLoad;
@@ -14,14 +12,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Page;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class TaskLoadTest {
+public class TaskLoadTest extends AbstractTaskTestSupport {
     private static final String USER = "Fred";
 
     private final IdentifierFactory identifierFactory = IdentifierFactory.getInstance();
@@ -32,7 +29,6 @@ public class TaskLoadTest {
     @Autowired
     private CommandGateway commandGateway;
 
-    @SuppressWarnings("ConstantConditions")
     @Test
     public void scenarios() {
         String title = "Meeting";
@@ -48,7 +44,7 @@ public class TaskLoadTest {
 
         assertEquals( loadCommand.getId(), rv );
 
-        TaskActive task = get( false, 1 );
+        TaskActive task = get( handler, USER, false, 1, loadCommand.getId() );
 
         checkExpected( loadCommand, task );
 
@@ -94,7 +90,7 @@ public class TaskLoadTest {
 
         assertEquals( overwrite.getId(), rv );
 
-        task = get( true, 1 );
+        task = get( handler, USER, true, 1, loadCommand.getId() );
 
         checkExpected( overwrite, task );
 
@@ -109,7 +105,7 @@ public class TaskLoadTest {
 
         assertEquals( overwrite.getId(), rv );
 
-        task = get( false, 1 );
+        task = get( handler, USER, false, 1, overwrite.getId() );
 
         checkExpected( overwrite, task );
 
@@ -123,9 +119,9 @@ public class TaskLoadTest {
 
         assertNotNull( rv ); // ID
 
-        task = get( false, 2, overwrite.getId() );
+        task = get( handler, USER, false, 2, rv.toString() );
 
-        loadCommand.setId(rv.toString()); // ID
+        loadCommand.setId( rv.toString() ); // ID
 
         checkExpected( loadCommand, task );
     }
@@ -133,33 +129,12 @@ public class TaskLoadTest {
     private void checkExpected( AbstractTaskCommandLoad command, TaskActive task ) {
         assertEquals( command.getId(), task.getId() );
 
-        if (command.getCreatedHour() == null) {
+        if ( command.getCreatedHour() == null ) {
             command.setCreatedHour( task.getCreatedHour() );
         }
 
         if ( !command.isEquivalent( task ) ) {
             fail( command.delta( task ) );
         }
-    }
-
-    private TaskActive get( boolean completed, int expected, String... skipIds ) {
-        Page<TaskActive> page = handler.findAll( USER, completed, null );
-        assertNotNull( page );
-        List<TaskActive> tasks = page.getContent();
-        assertNotNull( tasks );
-        assertEquals( expected, tasks.size() );
-        if ( expected != 0 ) {
-            if ( skipIds.length == 0 ) {
-                return tasks.get( 0 );
-            }
-            List<String> skipIdCollection = Arrays.asList( skipIds );
-            for ( TaskActive task : tasks ) {
-                if ( !skipIdCollection.contains( task.getId() ) ) {
-                    return task;
-                }
-            }
-            return tasks.get( 0 );
-        }
-        return null;
     }
 }

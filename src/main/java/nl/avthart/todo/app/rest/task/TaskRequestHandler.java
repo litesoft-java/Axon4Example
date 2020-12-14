@@ -30,12 +30,13 @@ public class TaskRequestHandler {
         return repo.findActiveByUsernameAndCompleted( userName, completed, pageable );
     }
 
-    public void create( String userName, TaskRequestCreate request ) {
-        sendAndWait( TaskCommandCreate.builder()
-                             .id( identifierFactory.generateIdentifier() )
-                             .username( userName )
-                             .title( request.getTitle() )
-                             .build() );
+    public String create( String userName, TaskRequestCreate request ) {
+        Object id = sendAndWait( TaskCommandCreate.builder()
+                                         .id( identifierFactory.generateIdentifier() )
+                                         .username( userName )
+                                         .title( request.getTitle() )
+                                         .build() );
+        return (id == null) ? null : id.toString();
     }
 
     public void modifyTitle( String identifier, TaskRequestModifyTitle request ) {
@@ -65,7 +66,7 @@ public class TaskRequestHandler {
         sendAndWait( new TaskCommandRestore( identifier ) );
     }
 
-    private void sendAndWait( TaskCommand command ) {
-        commandGateway.sendAndWait( command );
+    private Object sendAndWait( TaskCommand command ) {
+        return commandGateway.sendAndWait( command );
     }
 }
