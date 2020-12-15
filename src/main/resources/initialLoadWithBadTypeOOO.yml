@@ -1,0 +1,16 @@
+Task:
+  - username: Mikaela
+    createdHour: 2011-01-16T12Z
+    title: Born
+    starred: true
+    completed: true
+  - username: Devin
+    createdHour: 1981-01-15T12Z
+    title: Born
+    starred: true
+    completed: true
+OOO:
+  - username: Mikaela
+    fromMinute: 2020-12-31T16Z
+    uptoMinute: 2021-01-02T09Z
+    reason: New Years

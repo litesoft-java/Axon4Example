@@ -1,9 +1,10 @@
-package nl.avthart.todo.app.query.task;
+package nl.avthart.todo.app.domain.task.update;
 
 import java.time.Instant;
 
 import nl.avthart.todo.app.common.axon.AbstractPrimaryProjector;
 import nl.avthart.todo.app.common.axon.Event;
+import nl.avthart.todo.app.common.axon.LastEventReader;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
 import nl.avthart.todo.app.common.exceptions.CantUpdateException;
 import nl.avthart.todo.app.domain.task.commands.AbstractTaskCommandLoad;
@@ -21,6 +22,10 @@ import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventUpdated;
 import nl.avthart.todo.app.flags.Monitor;
+import nl.avthart.todo.app.query.task.TaskActive;
+import nl.avthart.todo.app.query.task.TaskDeleted;
+import nl.avthart.todo.app.query.task.TaskEntity;
+import nl.avthart.todo.app.query.task.TaskPrimaryProjectionRepository;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.eventhandling.EventHandler;
@@ -31,8 +36,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskCommand, AbstractTaskCommandLoad, TaskActive, TaskDeleted> {
 
-    public TaskPrimaryProjector( TaskPrimaryProjectionRepository repo, CommandGateway commandGateway ) {
-        super( repo, commandGateway, "Task" );
+    public TaskPrimaryProjector( TaskPrimaryProjectionRepository repo,
+                                 LastEventReader lastEventReader,
+                                 CommandGateway commandGateway ) {
+        super( repo, lastEventReader, commandGateway, "Task", TaskAggregate.class );
+    }
+
+    @Override
+    protected String fromLastEventAggregateId( String id ) {
+        return id;
     }
 
     /**
@@ -107,7 +119,7 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
         return new TaskActive( TaskEntity.builder()
                                        .id( event.getId() )
                                        .version( 0L )
-                                       .createdHour( loadUpdateField( event.getCreatedHour(), toHour( createdAt ) ) )
+                                       .createdHour( loadUpdateField( toHour( createdAt ), event.getCreatedHour() ) )
                                        .username( event.getUsername() )
                                        .title( event.getTitle() )
                                        .completed( event.isCompleted() )

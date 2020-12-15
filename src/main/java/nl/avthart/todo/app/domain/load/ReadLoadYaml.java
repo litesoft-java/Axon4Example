@@ -27,9 +27,20 @@ public class ReadLoadYaml {
     };
 
     public Map<String, List<Map<String, ?>>> read( String source, String... lines ) {
-        String content = "";
-        if ( (lines != null) && (lines.length > 0) ) {
-            content = String.join( "\n", lines ) + "\n";
+        return (lines == null) || (lines.length == 0) ?
+               read(source, "") :
+               read( source, String.join( "\n", lines ) + "\n");
+    }
+
+    public Map<String, List<Map<String, ?>>> read( String source, List<String> lines ) {
+        return (lines == null) || lines.isEmpty() ?
+               read(source, "") :
+               read( source, String.join( "\n", lines ) + "\n");
+    }
+
+    public Map<String, List<Map<String, ?>>> read( String source, String content ) {
+        if (content == null) {
+            content = "";
         }
         Map<String, ?> map;
         try {

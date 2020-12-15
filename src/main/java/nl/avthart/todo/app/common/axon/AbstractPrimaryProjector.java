@@ -19,8 +19,34 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 @RequiredArgsConstructor
 public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSupplier<ID_Type>, LoadCommand extends IdSupplier<ID_Type>, EntityActive extends ActiveProjection<ID_Type>, EntityDeleted extends DeletedProjection<ID_Type>> implements PrimaryProjector {
     protected final PrimaryProjectorRepository<ID_Type, EntityActive, EntityDeleted> repo;
+    private final LastEventReader lastEventReader;
     private final CommandGateway commandGateway;
     private final String entityName;
+    private final Class<? extends AggregateObject> aggregateClass;
+
+    public void ensureProjectionsCurrent() {
+        LastEvent event = lastEventReader.read( aggregateClass );
+        if ( event != null ) {
+            ID_Type id = fromLastEventAggregateId( event.getAggregateIdentifier() );
+            boolean deleted = event.getPayloadType().endsWith( "Deleted" ); // Requires all Deleted Events to end with Deleted
+            while ( !idExists( deleted, id ) ) {
+                try {
+                    Thread.sleep( 250 );
+                }
+                catch ( InterruptedException notReallyExpectedBut ) {
+                    notReallyExpectedBut.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private boolean idExists( boolean deleted, ID_Type id ) {
+        return (null != (deleted ?
+                         repo.findDeletedById( id ) :
+                         repo.findActiveById( id )));
+    }
+
+    abstract protected ID_Type fromLastEventAggregateId( String id );
 
     protected Instant ensureInstant( Instant instant ) {
         return (instant != null) ? instant : Instant.now();
@@ -140,13 +166,13 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
     }
 
     protected Object load( LoadCommand command, boolean overwrite ) {
-        if (command == null) {
+        if ( command == null ) {
             throw new NullPointerException( "No LoadCommand" );
         }
         EntityActive active = readActive( command );
         Command nextCommand = (active == null) ?
-                             createCreateCommand( command ) :
-                             optionalUpdateCommand( active, command, overwrite );
+                              createCreateCommand( command ) :
+                              optionalUpdateCommand( active, command, overwrite );
         if ( nextCommand == null ) {
             return null;
         }

@@ -1,6 +1,8 @@
-package nl.avthart.todo.app.domain.task;
+package nl.avthart.todo.app.domain.task.update;
 
+import nl.avthart.todo.app.common.axon.AggregateObject;
 import nl.avthart.todo.app.common.exceptions.AlreadyDeletedException;
+import nl.avthart.todo.app.domain.task.TaskAlreadyCompletedException;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandComplete;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandDelete;
@@ -19,7 +21,6 @@ import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
 import nl.avthart.todo.app.domain.task.events.TaskEventUpdated;
 import nl.avthart.todo.app.flags.Monitor;
 import nl.avthart.todo.app.query.task.AbstractTaskEntry_v001;
-import nl.avthart.todo.app.query.task.TaskPrimaryProjector;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.common.IdentifierFactory;
 import org.axonframework.eventhandling.SequenceNumber;
@@ -33,7 +34,7 @@ import static org.axonframework.modelling.command.AggregateLifecycle.apply;
  * Task
  */
 @Aggregate
-public class TaskAggregate extends AbstractTaskEntry_v001 {
+public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateObject {
 
     /**
      * The constant serialVersionUID
