@@ -68,7 +68,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
         Monitor.show();
         // ^^^ Testing
         String id = command.getId();
-        if (id == null) {
+        if ( id == null ) {
             id = IdentifierFactory.getInstance().generateIdentifier();
         }
         apply( primaryProjector.syncProcess( null,

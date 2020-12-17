@@ -5,9 +5,9 @@ import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class TaskRequestModifyTitle extends TaskTitleRequest {
-	@SuppressWarnings("unused")
-	@Builder
-	public TaskRequestModifyTitle( String title ) {
-		super( title );
-	}
+    @SuppressWarnings("unused")
+    @Builder
+    public TaskRequestModifyTitle( String title ) {
+        super( title );
+    }
 }

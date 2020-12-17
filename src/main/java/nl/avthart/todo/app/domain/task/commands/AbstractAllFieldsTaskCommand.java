@@ -2,7 +2,6 @@ package nl.avthart.todo.app.domain.task.commands;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.ToString;
 import nl.avthart.todo.app.query.task.AbstractTaskEntry_v001;
 import org.axonframework.modelling.command.TargetAggregateIdentifier;

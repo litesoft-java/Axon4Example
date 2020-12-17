@@ -5,7 +5,6 @@ import java.time.Instant;
 
 import lombok.RequiredArgsConstructor;
 import nl.avthart.todo.app.common.exceptions.AbstractCommonException;
-import nl.avthart.todo.app.common.exceptions.BadRequestException;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
 import nl.avthart.todo.app.common.exceptions.CantDeleteException;
 import nl.avthart.todo.app.common.exceptions.CantRestoreException;

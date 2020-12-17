@@ -87,6 +87,6 @@ public class TaskController implements Endpoint.Controller {
 
     @ExceptionHandler
     public void handleException( Principal principal, Throwable exception ) {
-        messagingTemplate.convertAndSendToUser( principal.getName(), "/queue/errors", ExceptionMessage.from(exception) );
+        messagingTemplate.convertAndSendToUser( principal.getName(), "/queue/errors", ExceptionMessage.from( exception ) );
     }
 }

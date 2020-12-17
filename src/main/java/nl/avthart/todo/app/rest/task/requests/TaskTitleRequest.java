@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public abstract class TaskTitleRequest {
-	@NotNull
-	private String title;
+    @NotNull
+    private String title;
 }

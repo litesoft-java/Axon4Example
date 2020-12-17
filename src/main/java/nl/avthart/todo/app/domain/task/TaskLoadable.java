@@ -29,14 +29,14 @@ public class TaskLoadable implements Loadable<TaskCommandLoad> {
             @Override
             @SuppressWarnings("unchecked")
             String convert( Object value ) {
-                return Loadable.optionalRegex(Loadable.asString( value, name() ), name(), "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}Z$");
+                return Loadable.optionalRegex( Loadable.asString( value, name() ), name(), "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}Z$" );
             }
         },
         title {
             @Override
             @SuppressWarnings("unchecked")
             String convert( Object value ) {
-                return Loadable.requiredString(Loadable.asString( value, name() ), name());
+                return Loadable.requiredString( Loadable.asString( value, name() ), name() );
             }
         },
         starred {
@@ -54,12 +54,13 @@ public class TaskLoadable implements Loadable<TaskCommandLoad> {
             }
         };
 
-        <T> T from( Map<String, ?> map) {
+        <T> T from( Map<String, ?> map ) {
             return convert( map.get( name() ) );
         }
 
-        abstract <T> T convert(Object value);
+        abstract <T> T convert( Object value );
     }
+
     @Override
     public String type() {
         return "Task";
@@ -68,12 +69,12 @@ public class TaskLoadable implements Loadable<TaskCommandLoad> {
     @Override
     public TaskCommandLoad createCommand( Map<String, ?> map ) {
         return TaskCommandLoad.builder()
-                .id( field.id.from(map) )
-                .username( field.username.from(map) )
-                .createdHour( field.createdHour.from(map) )
-                .title( field.title.from(map) )
-                .starred( field.starred.from(map) )
-                .completed( field.completed.from(map) )
+                .id( field.id.from( map ) )
+                .username( field.username.from( map ) )
+                .createdHour( field.createdHour.from( map ) )
+                .title( field.title.from( map ) )
+                .starred( field.starred.from( map ) )
+                .completed( field.completed.from( map ) )
                 .build();
     }
 }

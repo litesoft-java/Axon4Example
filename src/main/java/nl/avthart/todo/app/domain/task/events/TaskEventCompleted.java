@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TaskEventCompleted implements TaskEvent {
 
-	String id;
+    String id;
 }

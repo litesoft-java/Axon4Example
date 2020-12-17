@@ -8,7 +8,7 @@ public class Monitor {
     private static boolean report = false;
 
     public static void show() {
-        if (report) {
+        if ( report ) {
             new MonitorException( Instant.now().toString() ).printStackTrace();
         }
     }

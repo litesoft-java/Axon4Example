@@ -17,46 +17,44 @@ import org.springframework.web.socket.config.annotation.WebSocketTransportRegist
 @EnableWebSocketMessageBroker
 public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer {
 
-	@Override
-	public void configureMessageBroker(MessageBrokerRegistry config) {
-		config.enableSimpleBroker("/topic", "/queue");
-		config.setApplicationDestinationPrefixes("/app");
-	}
+    @Override
+    public void configureMessageBroker( MessageBrokerRegistry config ) {
+        config.enableSimpleBroker( "/topic", "/queue" );
+        config.setApplicationDestinationPrefixes( "/app" );
+    }
 
-	@Override
-	public boolean configureMessageConverters(List<MessageConverter> converters) {
-		return true;
-	}
+    @Override
+    public boolean configureMessageConverters( List<MessageConverter> converters ) {
+        return true;
+    }
 
-	@Override
-	public void registerStompEndpoints(StompEndpointRegistry registry) {
-		registry.addEndpoint("/tasks").withSockJS();
-	}
+    @Override
+    public void registerStompEndpoints( StompEndpointRegistry registry ) {
+        registry.addEndpoint( "/tasks" ).withSockJS();
+    }
 
-	@Override
-	public void configureWebSocketTransport(WebSocketTransportRegistration webSocketTransportRegistration) {
+    @Override
+    public void configureWebSocketTransport( WebSocketTransportRegistration webSocketTransportRegistration ) {
 
-	}
+    }
 
-	@Override
-	public void configureClientInboundChannel(ChannelRegistration channelRegistration) {
+    @Override
+    public void configureClientInboundChannel( ChannelRegistration channelRegistration ) {
 
-	}
+    }
 
-	@Override
-	public void configureClientOutboundChannel(ChannelRegistration channelRegistration) {
+    @Override
+    public void configureClientOutboundChannel( ChannelRegistration channelRegistration ) {
 
-	}
+    }
 
-	@Override
-	public void addArgumentResolvers(List<HandlerMethodArgumentResolver> list) {
+    @Override
+    public void addArgumentResolvers( List<HandlerMethodArgumentResolver> list ) {
 
-	}
+    }
 
-	@Override
-	public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> list) {
+    @Override
+    public void addReturnValueHandlers( List<HandlerMethodReturnValueHandler> list ) {
 
-	}
-
-
+    }
 }

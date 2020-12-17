@@ -16,11 +16,11 @@ public abstract class AbstractCommonException extends RuntimeException {
     @SuppressWarnings("unchecked")
     public static <T extends AbstractCommonException> T map( Throwable cause ) {
         for ( Throwable current = cause; current != null; current = cause ) {
-            if (current instanceof AbstractCommonException) {
+            if ( current instanceof AbstractCommonException ) {
                 return (T)current;
             }
             cause = current.getCause();
-            if (cause == current) {
+            if ( cause == current ) {
                 cause = null;
             }
         }

@@ -38,7 +38,7 @@ public class RunPostDatabaseReadyRunnables {
             System.out.println( what + ":" );
             for ( PostDatabaseReadyRunnable runnable : runnables ) {
                 try {
-                    System.out.println("   " + runnable.getClass().getSimpleName());
+                    System.out.println( "   " + runnable.getClass().getSimpleName() );
                     method.accept( runnable );
                 }
                 catch ( Exception e ) {

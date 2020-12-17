@@ -37,7 +37,7 @@ public abstract class AbstractTaskEntry_v001 {
                 ;
     }
 
-    public String delta(@NotNull AbstractTaskEntry_v001 them) {
+    public String delta( @NotNull AbstractTaskEntry_v001 them ) {
         StringBuilder sb = new StringBuilder()
                 .append( this.getClass().getSimpleName() ).append( " != " ).append( them.getClass().getSimpleName() ).append( ":" );
         deltaField( sb, "createdHour", this.createdHour, them.createdHour );
@@ -46,24 +46,22 @@ public abstract class AbstractTaskEntry_v001 {
         deltaField( sb, "  completed", this.completed, them.completed );
         deltaField( sb, "    starred", this.starred, them.starred );
         return sb.toString();
-
     }
 
-    private static void deltaField( StringBuilder sb, String fieldName, Object thisField, Object themField) {
-        if (!Objects.equals( thisField, themField )) {
+    private static void deltaField( StringBuilder sb, String fieldName, Object thisField, Object themField ) {
+        if ( !Objects.equals( thisField, themField ) ) {
             sb.append( "\n    " ).append( fieldName ).append( ": " );
-            addendFieldValue(sb, thisField);
+            addendFieldValue( sb, thisField );
             sb.append( " != " );
-            addendFieldValue(sb, themField);
+            addendFieldValue( sb, themField );
         }
     }
 
     private static void addendFieldValue( StringBuilder sb, Object value ) {
-        if (value instanceof String) {
+        if ( value instanceof String ) {
             sb.append( "'" ).append( value ).append( "'" );
         } else {
             sb.append( value ); // includes null
         }
-
     }
 }

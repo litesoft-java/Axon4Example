@@ -28,18 +28,18 @@ public class ReadLoadYaml {
 
     public Map<String, List<Map<String, ?>>> read( String source, String... lines ) {
         return (lines == null) || (lines.length == 0) ?
-               read(source, "") :
-               read( source, String.join( "\n", lines ) + "\n");
+               read( source, "" ) :
+               read( source, String.join( "\n", lines ) + "\n" );
     }
 
     public Map<String, List<Map<String, ?>>> read( String source, List<String> lines ) {
         return (lines == null) || lines.isEmpty() ?
-               read(source, "") :
-               read( source, String.join( "\n", lines ) + "\n");
+               read( source, "" ) :
+               read( source, String.join( "\n", lines ) + "\n" );
     }
 
     public Map<String, List<Map<String, ?>>> read( String source, String content ) {
-        if (content == null) {
+        if ( content == null ) {
             content = "";
         }
         Map<String, ?> map;
@@ -77,7 +77,7 @@ public class ReadLoadYaml {
                     if ( (c != '_') && !Character.isAlphabetic( c ) ) {
                         throw new ParsingException( keyEntryExceptionPrefix + "', expected key to start with a letter or underscore (_), it was: " + sKey );
                     }
-                    if ( sKey.contains(" ") ) {
+                    if ( sKey.contains( " " ) ) {
                         throw new ParsingException( keyEntryExceptionPrefix + "', expected key may not contains a space, it was: " + sKey );
                     }
                 }

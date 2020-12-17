@@ -199,7 +199,7 @@ public class Endpoint {
 
         @Override
         protected void process( RequestMapping annotation ) {
-            super.process(annotation);
+            super.process( annotation );
             RequestMethod[] methods = annotation.method();
             if ( (methods != null) && (methods.length != 0) ) {
                 method = methods[0];
@@ -208,31 +208,31 @@ public class Endpoint {
 
         @Override
         protected void process( GetMapping annotation ) {
-            super.process(annotation);
+            super.process( annotation );
             method = RequestMethod.GET;
         }
 
         @Override
         protected void process( PostMapping annotation ) {
-            super.process(annotation);
+            super.process( annotation );
             method = RequestMethod.POST;
         }
 
         @Override
         protected void process( PutMapping annotation ) {
-            super.process(annotation);
+            super.process( annotation );
             method = RequestMethod.PUT;
         }
 
         @Override
         protected void process( PatchMapping annotation ) {
-            super.process(annotation);
+            super.process( annotation );
             method = RequestMethod.PATCH;
         }
 
         @Override
         protected void process( DeleteMapping annotation ) {
-            super.process(annotation);
+            super.process( annotation );
             method = RequestMethod.DELETE;
         }
     }
@@ -250,15 +250,15 @@ public class Endpoint {
 
     private static String normalizePath( String path ) {
         int closeAt = path.indexOf( '}' );
-        if (closeAt == -1) {
+        if ( closeAt == -1 ) {
             return path;
         }
         StringBuilder sb = new StringBuilder( path );
-        for (int openAt; -1 != (openAt = sb.lastIndexOf( "{", closeAt ));) {
+        for ( int openAt; -1 != (openAt = sb.lastIndexOf( "{", closeAt )); ) {
             sb.delete( openAt, closeAt );
             sb.setCharAt( openAt, '*' );
             closeAt = path.indexOf( '}', openAt );
-            if (closeAt == -1) {
+            if ( closeAt == -1 ) {
                 break;
             }
         }

@@ -32,7 +32,7 @@ public class ExceptionMessage {
                 cause = null;
             }
             String simpleName = t.getClass().getSimpleName();
-            if ((cause != null) && IGNORE_EXCEPTION_SIMPLE_CLASS_NAMES.contains( simpleName )) {
+            if ( (cause != null) && IGNORE_EXCEPTION_SIMPLE_CLASS_NAMES.contains( simpleName ) ) {
                 t = cause;
                 continue;
             }

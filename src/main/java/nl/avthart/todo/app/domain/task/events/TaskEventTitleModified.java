@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TaskEventTitleModified implements TaskEvent {
 
-	String id;
-	
-	String title;
+    String id;
+
+    String title;
 }

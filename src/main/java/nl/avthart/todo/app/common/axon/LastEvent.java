@@ -10,6 +10,4 @@ public class LastEvent {
     String aggregateIdentifier;
     long sequenceNumber;
     String payloadType;
-
-
 }
