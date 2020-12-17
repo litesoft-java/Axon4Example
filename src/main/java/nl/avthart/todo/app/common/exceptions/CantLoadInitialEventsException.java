@@ -1,7 +1,7 @@
 package nl.avthart.todo.app.common.exceptions;
 
 @SuppressWarnings("unused")
-public class CantLoadInitialEventsException extends RuntimeException {
+public class CantLoadInitialEventsException extends AbstractCommonException {
     public CantLoadInitialEventsException( String message ) {
         super( message );
     }

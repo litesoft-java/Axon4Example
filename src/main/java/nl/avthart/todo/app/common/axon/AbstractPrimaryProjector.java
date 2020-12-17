@@ -1,8 +1,11 @@
 package nl.avthart.todo.app.common.axon;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Instant;
 
 import lombok.RequiredArgsConstructor;
+import nl.avthart.todo.app.common.exceptions.AbstractCommonException;
+import nl.avthart.todo.app.common.exceptions.BadRequestException;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
 import nl.avthart.todo.app.common.exceptions.CantDeleteException;
 import nl.avthart.todo.app.common.exceptions.CantRestoreException;
@@ -226,38 +229,51 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
                                           cause );
     }
 
-    private Runnable reportUnexpectedException( Runnable proxy ) {
-        return () -> {
-            try {
-                proxy.run();
-            }
-            catch ( OptimisticLockException | BusinessRuleException e ) { // Expected
-                throw e;
-            }
-            catch ( RuntimeException e ) { // Unexpected
-                e.printStackTrace(); // report
-                throw e;
-            }
-        };
+    private interface ExceptionalRunnable {
+        void run()
+                throws Exception;
     }
 
-    private Runnable reportAndSwallowException( Runnable proxy ) {
+    private Runnable reportAndSwallowException( ExceptionalRunnable proxy ) {
         return () -> {
             try {
                 proxy.run();
             }
-            catch ( RuntimeException e ) {
+            catch ( Exception e ) {
                 e.printStackTrace(); // Report
                 // Swallow
             }
         };
     }
 
-    private Runnable dbInsert( Projection<ID_Type> projection, Runnable repoCall ) {
+    private Runnable reportUnexpectedException( ExceptionalRunnable proxy ) {
+        return () -> {
+            try {
+                proxy.run();
+            }
+            catch ( AbstractCommonException e ) { // Expected
+                throw e;
+            }
+            catch ( Exception e ) { // Unexpected
+                throw map( e );
+            }
+        };
+    }
+
+    private RuntimeException map( Exception e ) {
+        AbstractCommonException ace = AbstractCommonException.map( e );
+        if ( ace != null ) {
+            return ace;
+        }
+        e.printStackTrace(); // report
+        return (e instanceof RuntimeException) ? (RuntimeException)e : new RuntimeException( e );
+    }
+
+    private ExceptionalRunnable dbInsert( Projection<ID_Type> projection, ExceptionalRunnable repoCall ) {
         return () -> dbChange( projection, repoCall ).run();
     }
 
-    private Runnable dbUpdate( Projection<ID_Type> projection, Runnable repoCall ) {
+    private ExceptionalRunnable dbUpdate( Projection<ID_Type> projection, ExceptionalRunnable repoCall ) {
         return () -> {
             try {
                 dbChange( projection, repoCall ).run();
@@ -268,13 +284,13 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
         };
     }
 
-    private Runnable dbChange( Projection<ID_Type> projection, Runnable repoCall ) {
+    private ExceptionalRunnable dbChange( Projection<ID_Type> projection, ExceptionalRunnable repoCall ) {
         return () -> {
             try {
                 repoCall.run();
             }
-            catch ( DataIntegrityViolationException | ConstraintViolationException e ) {
-                throw constraintError( projection, e.getMessage(), e );
+            catch ( SQLIntegrityConstraintViolationException | DataIntegrityViolationException | ConstraintViolationException e ) {
+                throw constraintError( projection, "SQL Constraint Violation", e );
             }
         };
     }

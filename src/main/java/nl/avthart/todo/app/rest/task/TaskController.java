@@ -4,6 +4,7 @@ import java.security.Principal;
 import javax.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
+import nl.avthart.todo.app.common.util.ExceptionMessage;
 import nl.avthart.todo.app.configuration.Endpoint;
 import nl.avthart.todo.app.query.task.TaskActive;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestCreate;
@@ -86,6 +87,6 @@ public class TaskController implements Endpoint.Controller {
 
     @ExceptionHandler
     public void handleException( Principal principal, Throwable exception ) {
-        messagingTemplate.convertAndSendToUser( principal.getName(), "/queue/errors", exception.getMessage() );
+        messagingTemplate.convertAndSendToUser( principal.getName(), "/queue/errors", ExceptionMessage.from(exception) );
     }
 }

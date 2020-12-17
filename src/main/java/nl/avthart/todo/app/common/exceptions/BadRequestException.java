@@ -3,7 +3,7 @@ package nl.avthart.todo.app.common.exceptions;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class BadRequestException extends RuntimeException {
+public abstract class BadRequestException extends AbstractCommonException {
     private static final long serialVersionUID = 1518440584190922771L;
 
     protected BadRequestException( String message, Throwable... cause ) {
