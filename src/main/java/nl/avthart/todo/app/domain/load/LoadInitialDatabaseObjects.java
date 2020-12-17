@@ -29,6 +29,7 @@ public class LoadInitialDatabaseObjects implements PostDatabaseReadyRunnable {
         for ( PrimaryProjector projector : primaryProjectors ) {
             projector.ensureProjectionsCurrent();
         }
+        System.out.println( "All Primary Projections are current." );
 
         ClassPathResource resource = new ClassPathResource( "initialLoad.yml" );
 
@@ -53,6 +54,6 @@ public class LoadInitialDatabaseObjects implements PostDatabaseReadyRunnable {
             throw new CantLoadInitialEventsException( String.join( "\n", errors ) );
         }
 
-        System.out.println( "LoadInitialDatabaseObjects:\n" + result );
+        System.out.println( "Load Initial Database Objects result :\n" + result );
     }
 }

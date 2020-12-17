@@ -31,12 +31,15 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
         if ( event != null ) {
             ID_Type id = fromLastEventAggregateId( event.getAggregateIdentifier() );
             boolean deleted = event.getPayloadType().endsWith( "Deleted" ); // Requires all Deleted Events to end with Deleted
-            while ( !idExists( deleted, id ) ) {
+            for ( int i = 0; !idExists( deleted, id ); i++ ) {
                 try {
                     Thread.sleep( 250 );
                 }
                 catch ( InterruptedException notReallyExpectedBut ) {
                     notReallyExpectedBut.printStackTrace();
+                }
+                if ((i & 7) == 0) { // Every 8th loop (2secs)
+                    System.out.println("Waiting on Projector to finish last event projection for: " + entityName);
                 }
             }
         }
