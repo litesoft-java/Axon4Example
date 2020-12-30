@@ -4,15 +4,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import nl.avthart.todo.app.domain.task.TaskLoadable;
-import nl.avthart.todo.app.domain.task.commands.TaskCommandLoad;
 import nl.avthart.todo.app.query.task.TaskActive;
 import nl.avthart.todo.app.rest.task.TaskRequestHandler;
-import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class AbstractTaskTestSupport {
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -53,9 +49,9 @@ public class AbstractTaskTestSupport {
             }
         }
         if (expected != 0) {
-            assertNotNull( "Task " + taskIdOfInterest + " Not found", task );
+            assertNotNull( task,"Task " + taskIdOfInterest + " Not found" );
         } else {
-            assertNull( "Task " + taskIdOfInterest + " should NOT have been found", task );
+            assertNull( task, "Task " + taskIdOfInterest + " should NOT have been found" );
         }
         return task;
     }
