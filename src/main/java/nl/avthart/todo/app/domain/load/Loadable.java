@@ -1,8 +1,14 @@
 package nl.avthart.todo.app.domain.load;
 
 import java.util.Map;
+import java.util.UUID;
 
+@SuppressWarnings("unused")
 public interface Loadable<T extends LoadCommand> {
+    static String defaultString( String value, String defaultString ) {
+        return (value != null) ? value : defaultString;
+    }
+
     static String optionalRegex( String value, String key, String regex ) {
         if ( value == null ) {
             return null;
@@ -13,8 +19,8 @@ public interface Loadable<T extends LoadCommand> {
         return value;
     }
 
-    static String defaultString( String value, String defaultString ) {
-        return (value != null) ? value : defaultString;
+    static String requiredRegex( String value, String key, String regex ) {
+        return optionalRegex( requiredString( value, key ), key, regex );
     }
 
     static String requiredString( String value, String key ) {
@@ -24,7 +30,14 @@ public interface Loadable<T extends LoadCommand> {
         return value;
     }
 
-    @SuppressWarnings("unused")
+    static String requiredMinLengthString( String value, String key, int minLength ) {
+        int length = requiredString( value, key ).length();
+        if ( length < minLength ) {
+            throw new IllegalArgumentException( "required String '" + key + "' too short, must be at least " + minLength + " characters" );
+        }
+        return value;
+    }
+
     static String asString( Object value, String key ) {
         if ( value == null ) {
             return null;
@@ -37,6 +50,11 @@ public interface Loadable<T extends LoadCommand> {
             }
         }
         return str;
+    }
+
+    static UUID asUUID( Object value, String key ) {
+        String str = asString( value, key );
+        return (str == null) ? null : UUID.fromString( str );
     }
 
     static Boolean asBoolean( Object value, String key ) {
