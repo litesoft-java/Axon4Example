@@ -28,8 +28,8 @@ class ReadLoadYamlTest {
             assertEquals( 1, result.size() );
             List<Map<String, ?>> tasks = result.get( "Task" );
             assertEquals( 2, tasks.size() );
-            checkTask(tasks.get(0), "Mikaela", "2011-01-16T12Z", "Born", true);
-            checkTask(tasks.get(1), "Devin", "1981-01-15T12Z", null, null);
+            checkTask( tasks.get( 0 ), "Mikaela", "2011-01-16T12Z", "Born", true );
+            checkTask( tasks.get( 1 ), "Devin", "1981-01-15T12Z", null, null );
         }
         catch ( RuntimeException e ) {
             System.out.println( "ReadLoadYamlTest.readOk:\n" + result );
@@ -46,32 +46,32 @@ class ReadLoadYamlTest {
 
     @Test
     void readFailNotList() {
-        checkFailed( "not a list","",
-                "Task: Fail"
+        checkFailed( "not a list", "",
+                     "Task: Fail"
         );
     }
 
     @Test
     void readFailNotMap() {
-        checkFailed( "not a map","",
-                "Task:",
-                " - true"
+        checkFailed( "not a map", "",
+                     "Task:",
+                     " - true"
         );
     }
 
     @Test
     void readFailNumberKey() {
-        checkFailed( "start with a letter or underscore","",
-                "Task:",
-                " - 22: Mikaela"
+        checkFailed( "start with a letter or underscore", "",
+                     "Task:",
+                     " - 22: Mikaela"
         );
     }
 
     @Test
     void readFailContainsSpaces() {
-        checkFailed( "contains a space","",
-                "Task:",
-                " - Ш Щ Ь Й Ы Я Г И : Mikaela"
+        checkFailed( "contains a space", "",
+                     "Task:",
+                     " - Ш Щ Ь Й Ы Я Г И : Mikaela"
         );
     }
 

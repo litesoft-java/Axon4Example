@@ -39,30 +39,30 @@ class TaskLoadableTest extends AbstractTaskTestSupport {
 
         try {
             TaskCommandLoad command = LOADABLE.createCommand( populate( "title", "My-Task", "createdHour", "2011-01-16t12Z" ) );
-            fail("Expected command construction to fail: " + command);
+            fail( "Expected command construction to fail: " + command );
         }
         catch ( IllegalArgumentException e ) {
-            if (!e.getMessage().contains( "did not match" )) {
+            if ( !e.getMessage().contains( "did not match" ) ) {
                 throw e;
             }
         }
 
         try {
             TaskCommandLoad command = LOADABLE.createCommand( populate( "title", "" ) ); // No Title
-            fail("Expected command construction to fail: " + command);
+            fail( "Expected command construction to fail: " + command );
         }
         catch ( IllegalArgumentException e ) {
-            if (!e.getMessage().contains( "required String" )) {
+            if ( !e.getMessage().contains( "required String" ) ) {
                 throw e;
             }
         }
 
         try {
             TaskCommandLoad command = LOADABLE.createCommand( populate() ); // No Title
-            fail("Expected command construction to fail: " + command);
+            fail( "Expected command construction to fail: " + command );
         }
         catch ( IllegalArgumentException e ) {
-            if (!e.getMessage().contains( "required String" )) {
+            if ( !e.getMessage().contains( "required String" ) ) {
                 throw e;
             }
         }

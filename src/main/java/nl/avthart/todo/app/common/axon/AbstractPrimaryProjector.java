@@ -20,11 +20,11 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 @RequiredArgsConstructor
 public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSupplier<ID_Type>, LoadCommand extends IdSupplier<ID_Type>, EntityActive extends ActiveProjection<ID_Type>, EntityDeleted extends DeletedProjection<ID_Type>> implements PrimaryProjector {
-    protected final PrimaryProjectorRepository<ID_Type, EntityActive, EntityDeleted> repo;
+    protected final PrimaryProjectionWriteRepository<ID_Type, EntityActive, EntityDeleted> repo;
     private final LastEventReader lastEventReader;
     private final CommandGateway commandGateway;
     private final String entityName;
-    private final Class<? extends AggregateObject> aggregateClass;
+    private final Class<? extends AggregateObject<ID_Type>> aggregateClass;
 
     public void ensureProjectionsCurrent() {
         LastEvent event = lastEventReader.read( aggregateClass );
@@ -38,8 +38,8 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
                 catch ( InterruptedException notReallyExpectedBut ) {
                     notReallyExpectedBut.printStackTrace();
                 }
-                if ((i & 7) == 0) { // Every 8th loop (2secs)
-                    System.out.println("Waiting on Projector to finish last event projection for: " + entityName);
+                if ( (i & 7) == 0 ) { // Every 8th loop (2secs)
+                    System.out.println( "Waiting on Projector to finish last event projection for: " + entityName );
                 }
             }
         }
@@ -72,16 +72,15 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
     }
 
     // Update Support
-    protected EntityActive checkSyncUpdate( long currentVersion, Event<ID_Type> event ) {
+    protected EntityActive checkSyncUpdate( AggregateObject<ID_Type> aggregate, Event<ID_Type> event ) {
+        if ( aggregate.isDeleted() ) {
+            throw new DeletedException( error( event, "is currently deleted" ) );
+        }
         EntityActive active = readActive( event );
         if ( active == null ) {
-            boolean deleted = (null != readDeleted( event ));
-            if ( deleted ) {
-                throw new DeletedException( error( event, "is currently deleted" ) );
-            }
             throw new CantUpdateException( error( event, "does not currently exist" ) );
         }
-        checkSyncUpdateVersion( currentVersion, active );
+        checkSyncUpdateVersion( aggregate.getVersion(), active );
         return active;
     }
 
@@ -100,16 +99,15 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
     }
 
     // Delete Support
-    protected EntityActive checkSyncDelete( long currentVersion, Event<ID_Type> event ) {
+    protected EntityActive checkSyncDelete( AggregateObject<ID_Type> aggregate, Event<ID_Type> event ) {
+        if ( aggregate.isDeleted() ) {
+            throw new DeletedException( error( event, "is already deleted" ) );
+        }
         EntityActive active = readActive( event );
         if ( active == null ) {
-            boolean deleted = (null != readDeleted( event ));
-            if ( deleted ) {
-                throw new DeletedException( error( event, "is already deleted" ) );
-            }
             throw new CantDeleteException( error( event, "does not currently exist" ) );
         }
-        checkSyncUpdateVersion( currentVersion, active );
+        checkSyncUpdateVersion( aggregate.getVersion(), active );
         return active;
     }
 
@@ -128,15 +126,15 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
     }
 
     // Restore Support
-    protected EntityDeleted checkSyncRestore( long currentVersion, Event<ID_Type> event ) {
+    protected EntityDeleted checkSyncRestore( AggregateObject<ID_Type> aggregate, Event<ID_Type> event ) {
+        if ( !aggregate.isDeleted() ) { // Active!
+            throw new CantRestoreException( error( event, "is currently active" ) );
+        }
         EntityDeleted deleted = readDeleted( event );
         if ( deleted == null ) {
-            boolean active = (null != readActive( event ));
-            throw new CantRestoreException( error( event, active ?
-                                                          "is currently active" :
-                                                          "does not currently exist" ) );
+            throw new CantRestoreException( error( event, "does not currently exist" ) );
         }
-        checkSyncUpdateVersion( currentVersion, deleted );
+        checkSyncUpdateVersion( aggregate.getVersion(), deleted );
         return deleted;
     }
 
@@ -159,22 +157,11 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
     }
 
     // Support (Shared)
-    protected <T> T loadUpdateField( T existingValue, T newValue ) {
-        if ( newValue == null ) {
-            return existingValue;
-        }
-        if ( (existingValue != null) && (newValue instanceof String) // Left to Right!
-             && newValue.toString().trim().isEmpty() ) {
-            return existingValue;
-        }
-        return newValue;
-    }
-
     protected Object load( LoadCommand command, boolean overwrite ) {
         if ( command == null ) {
             throw new NullPointerException( "No LoadCommand" );
         }
-        EntityActive active = readActive( command );
+        EntityActive active = commandReadActive( command );
         Command nextCommand = (active == null) ?
                               createCreateCommand( command ) :
                               optionalUpdateCommand( active, command, overwrite );
@@ -188,6 +175,10 @@ public abstract class AbstractPrimaryProjector<ID_Type, Command extends IdSuppli
     protected abstract Command createCreateCommand( LoadCommand command );
 
     protected abstract Command optionalUpdateCommand( EntityActive active, LoadCommand command, boolean overwrite );
+
+    protected EntityActive commandReadActive( LoadCommand command ) {
+        return readActive( command );
+    }
 
     private EntityActive checkHandlerActiveVersion( long nextVersion, Event<ID_Type> event ) {
         EntityActive active = readActive( event );

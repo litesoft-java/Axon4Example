@@ -8,7 +8,7 @@ import nl.avthart.todo.app.domain.task.events.TaskEventTitleModified;
 import nl.avthart.todo.app.domain.task.events.TaskEventUnstarred;
 import nl.avthart.todo.app.flags.Monitor;
 import nl.avthart.todo.app.query.task.TaskActive;
-import nl.avthart.todo.app.query.task.TaskPrimaryProjectionRepository;
+import nl.avthart.todo.app.query.task.TaskPrimaryProjectionReadRepository;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.eventhandling.SequenceNumber;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,10 +23,10 @@ public class TaskEventNotifyingEventHandler {
 
     private final SimpMessageSendingOperations messagingTemplate;
 
-    private final TaskPrimaryProjectionRepository repo;
+    private final TaskPrimaryProjectionReadRepository repo;
 
     @Autowired
-    public TaskEventNotifyingEventHandler( SimpMessageSendingOperations messagingTemplate, TaskPrimaryProjectionRepository repo ) {
+    public TaskEventNotifyingEventHandler( SimpMessageSendingOperations messagingTemplate, TaskPrimaryProjectionReadRepository repo ) {
         this.messagingTemplate = messagingTemplate;
         this.repo = repo;
     }

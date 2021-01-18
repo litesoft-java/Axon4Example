@@ -27,15 +27,37 @@ public class TaskEntity extends AbstractTaskEntry_v001 implements Projection<Str
 
     protected Instant lastModified;
 
+    @SuppressWarnings("unused")
     @Builder(toBuilder = true)
     public TaskEntity( String id, Long version, Instant lastModified, String createdHour, String username, String title, boolean completed, boolean starred ) {
         super( createdHour, username, title, completed, starred );
-        this.id = id;
-        this.version = version;
-        this.lastModified = lastModified;
+        update( id, version, lastModified );
+    }
+
+    public TaskEntity( String id, Long version, Instant lastModified, AbstractTaskEntry_v001 them ) {
+        super( them );
+        update( id, version, lastModified );
     }
 
     protected TaskEntity( TaskEntity them ) {
-        this( them.id, them.version, them.lastModified, them.createdHour, them.username, them.title, them.completed, them.starred );
+        super( them );
+        update( them.id, them.version, them.lastModified );
+    }
+
+    private void update( String id, Long version, Instant lastModified ) {
+        this.id = id;
+        this.version = version;
+        this.lastModified = lastModified;
+
+        if ( getCreatedHour() == null ) {
+            setCreatedHour( toHour( (lastModified != null) ? lastModified : Instant.now() ) );
+        }
+    }
+
+    private String toHour( Instant instant ) {
+        // 2020-11-19T13Z
+        // 01234567-10123
+        // 2020-11-19T13:12:11.101Z
+        return instant.toString().substring( 0, 13 ) + "Z";
     }
 }

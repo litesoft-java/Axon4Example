@@ -43,13 +43,13 @@ public class AbstractTaskTestSupport {
         }
         TaskActive task = null;
         for ( TaskActive active : tasks ) {
-            if (active.getId().equals( taskIdOfInterest )) {
+            if ( active.getId().equals( taskIdOfInterest ) ) {
                 task = active;
                 break;
             }
         }
-        if (expected != 0) {
-            assertNotNull( task,"Task " + taskIdOfInterest + " Not found" );
+        if ( expected != 0 ) {
+            assertNotNull( task, "Task " + taskIdOfInterest + " Not found" );
         } else {
             assertNull( task, "Task " + taskIdOfInterest + " should NOT have been found" );
         }

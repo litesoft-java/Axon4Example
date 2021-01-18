@@ -3,6 +3,7 @@ package nl.avthart.todo.app.common.util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import lombok.AllArgsConstructor;
@@ -10,14 +11,15 @@ import lombok.AllArgsConstructor;
 public class FieldAccessors<T> {
 
     @AllArgsConstructor
-    private static class Field<T> {
+    private static class Field<T, V> {
         private String name;
-        private Function<T, ?> accessor;
+        private Function<T, V> accessor;
+        private BiConsumer<T, V> mutator;
     }
 
-    private final Field<T>[] fields;
+    private final Field<T, ?>[] fields;
 
-    private FieldAccessors( Field<T>[] fields ) {
+    private FieldAccessors( Field<T, ?>[] fields ) {
         this.fields = fields;
     }
 
@@ -27,9 +29,9 @@ public class FieldAccessors<T> {
     }
 
     public static class Builder<T> {
-        List<Field<T>> fields = new ArrayList<>();
+        List<Field<T, ?>> fields = new ArrayList<>();
 
-        public Builder<T> add( Function<T, ?> accessor, String name ) {
+        public <V> Builder<T> add( String name, Function<T, V> accessor, BiConsumer<T, V> mutator ) {
             if ( accessor == null ) {
                 throw new NullPointerException( "Accessor" );
             }
@@ -40,7 +42,7 @@ public class FieldAccessors<T> {
             if ( name.isEmpty() ) {
                 throw new IllegalArgumentException( "Name empty" );
             }
-            fields.add( new Field<>( name, accessor ) );
+            fields.add( new Field<>( name, accessor, mutator ) );
             return this;
         }
 
@@ -50,12 +52,12 @@ public class FieldAccessors<T> {
                 throw new IllegalArgumentException( "No fields added" );
             }
             int maxLength = fields.stream().map( f -> f.name.length() ).max( Integer::compareTo ).orElse( -1 );
-            for ( Field<T> field : fields ) {
+            for ( Field<T, ?> field : fields ) {
                 while ( field.name.length() < maxLength ) {
                     field.name = " " + field.name;
                 }
             }
-            Field<T>[] fieldArray = fields.toArray( new Field[0] );
+            Field<T, ?>[] fieldArray = fields.toArray( new Field[0] );
             return new FieldAccessors<>( fieldArray );
         }
     }
@@ -67,7 +69,7 @@ public class FieldAccessors<T> {
         if ( (thisInstance == null) || (themInstance == null) ) { // can't both be null
             return false;
         }
-        for ( Field<T> field : fields ) {
+        for ( Field<T, ?> field : fields ) {
             if ( !Objects.equals( field.accessor.apply( thisInstance ), field.accessor.apply( themInstance ) ) ) {
                 return false;
             }
@@ -82,14 +84,55 @@ public class FieldAccessors<T> {
         sb.append( different ? " != " : " == " );
         sb.append( (themInstance == null) ? "null" : themInstance.getClass().getSimpleName() );
         if ( different ) {
-            for ( Field<T> field : fields ) {
+            for ( Field<T, ?> field : fields ) {
                 deltaField( sb, field, thisInstance, themInstance );
             }
         }
         return sb.toString();
     }
 
-    private <THIS extends T, THEM extends T> void deltaField( StringBuilder sb, Field<T> field, THIS thisInstance, THEM themInstance ) {
+    public <THIS extends T, THEM extends T> void updateFirst( THIS firstInstance, THEM secondInstance ) {
+        if ( (firstInstance != null) && (secondInstance != null) ) {
+            for ( Field<T, ?> field : fields ) {
+                updateField( field, firstInstance, firstInstance, secondInstance );
+            }
+        }
+    }
+
+    public <THIS extends T, THEM extends T> void defaultFromSecond( THIS firstInstance, THEM secondInstance ) {
+        if ( (firstInstance != null) && (secondInstance != null) ) {
+            for ( Field<T, ?> field : fields ) {
+                updateField( field, firstInstance, secondInstance, firstInstance );
+            }
+        }
+    }
+
+    public static <V> V loadUpdateField( V existingValue, V newValue ) {
+        if ( newValue == null ) {
+            return existingValue;
+        }
+        // If there is an existing value AND the new value is an "effectively" empty string, then return the existing value.
+        if ( (existingValue != null) && (newValue instanceof String) ) {
+            if ( newValue.toString().trim().isEmpty() ) { // newValue
+                return existingValue;
+            }
+        }
+        return newValue;
+    }
+
+    private <V, UPDATE extends T, DEF extends T, NEW extends T> void updateField( Field<T, V> field,
+                                                                                  UPDATE updateInstance,
+                                                                                  DEF defInstance,
+                                                                                  NEW newInstance ) {
+        BiConsumer<T, V> mutator = field.mutator;
+        if ( mutator != null ) {
+            mutator.accept( updateInstance,
+                            loadUpdateField( field.accessor.apply( defInstance ),
+                                             field.accessor.apply( newInstance ) ) );
+        }
+    }
+
+    private <THIS extends T, THEM extends T> void deltaField( StringBuilder sb, Field<T, ?> field, THIS thisInstance, THEM themInstance ) {
         Object thisField = extractField( field, thisInstance );
         Object themField = extractField( field, themInstance );
         if ( !Objects.equals( thisField, themField ) ) {
@@ -98,7 +141,7 @@ public class FieldAccessors<T> {
         }
     }
 
-    private <O extends T> Object extractField( Field<T> field, O instance ) {
+    private <O extends T> Object extractField( Field<T, ?> field, O instance ) {
         if ( instance == null ) {
             return "N/A";
         }

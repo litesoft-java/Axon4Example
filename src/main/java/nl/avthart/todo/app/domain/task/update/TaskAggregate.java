@@ -1,7 +1,7 @@
 package nl.avthart.todo.app.domain.task.update;
 
+import lombok.Getter;
 import nl.avthart.todo.app.common.axon.AggregateObject;
-import nl.avthart.todo.app.common.exceptions.AlreadyDeletedException;
 import nl.avthart.todo.app.domain.task.TaskAlreadyCompletedException;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandComplete;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandCreate;
@@ -34,7 +34,8 @@ import static org.axonframework.modelling.command.AggregateLifecycle.apply;
  * Task
  */
 @Aggregate
-public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateObject {
+@Getter
+public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateObject<String> {
 
     /**
      * The constant serialVersionUID
@@ -84,7 +85,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
     @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandUpdate command, TaskPrimaryProjector primaryProjector ) {
-        apply( primaryProjector.syncProcess( version, null,
+        apply( primaryProjector.syncProcess( this, null,
                                              new TaskEventUpdated( command.getId(), command ) ) );
     }
 
@@ -97,8 +98,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
     @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandStar command, TaskPrimaryProjector primaryProjector ) {
-        assertOkForUpdate();
-        apply( primaryProjector.syncProcess( version, null,
+        apply( primaryProjector.syncProcess( assertOkForUpdate(), null,
                                              new TaskEventStarred( command.getId() ) ) );
     }
 
@@ -111,8 +111,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
     @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandUnstar command, TaskPrimaryProjector primaryProjector ) {
-        assertOkForUpdate();
-        apply( primaryProjector.syncProcess( version, null,
+        apply( primaryProjector.syncProcess( assertOkForUpdate(), null,
                                              new TaskEventUnstarred( command.getId() ) ) );
     }
 
@@ -125,8 +124,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
     @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandModifyTitle command, TaskPrimaryProjector primaryProjector ) {
-        assertOkForUpdate();
-        apply( primaryProjector.syncProcess( version, null,
+        apply( primaryProjector.syncProcess( assertOkForUpdate(), null,
                                              new TaskEventTitleModified( command.getId(),
                                                                          command.getTitle() ) ) );
     }
@@ -140,8 +138,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
     @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandComplete command, TaskPrimaryProjector primaryProjector ) {
-        assertOkForUpdate();
-        apply( primaryProjector.syncProcess( version, null,
+        apply( primaryProjector.syncProcess( assertOkForUpdate(), null,
                                              new TaskEventCompleted( command.getId() ) ) );
     }
 
@@ -154,10 +151,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
     @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandDelete command, TaskPrimaryProjector primaryProjector ) {
-        if ( deleted ) {
-            throw new AlreadyDeletedException( "Task [ identifier = " + id + " ] is already deleted." );
-        }
-        apply( primaryProjector.syncProcess( version, null,
+        apply( primaryProjector.syncProcess( this, null,
                                              new TaskEventDeleted( command.getId() ) ) );
     }
 
@@ -170,10 +164,7 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
     @SuppressWarnings("unused")
     @CommandHandler
     void on( TaskCommandRestore command, TaskPrimaryProjector primaryProjector ) {
-        if ( !deleted ) {
-            throw new AlreadyDeletedException( "Task [ identifier = " + id + " ] is not deleted." );
-        }
-        apply( primaryProjector.syncProcess( version, null,
+        apply( primaryProjector.syncProcess( this, null,
                                              new TaskEventRestored( command.getId() ) ) );
     }
 
@@ -239,12 +230,10 @@ public class TaskAggregate extends AbstractTaskEntry_v001 implements AggregateOb
         deleted = false;
     }
 
-    private void assertOkForUpdate() {
+    private TaskAggregate assertOkForUpdate() {
         if ( completed ) {
             throw new TaskAlreadyCompletedException( "Task [ identifier = " + id + " ] is completed." );
         }
-        if ( deleted ) {
-            throw new AlreadyDeletedException( "Task [ identifier = " + id + " ] is deleted." );
-        }
+        return this;
     }
 }

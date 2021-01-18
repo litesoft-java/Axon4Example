@@ -18,8 +18,8 @@ class FieldAccessorsTest {
 
         private static final FieldAccessors<A> FIELD_ACCESSORS =
                 FieldAccessors.builder( A.class )
-                        .add( A::getAString, "aString" )
-                        .add( A::isABool, "aBool" )
+                        .add( "aString", A::getAString, A::setAString )
+                        .add( "aBool", A::isABool, A::setABool )
                         .build();
 
         protected A( A fields ) {

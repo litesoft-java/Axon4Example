@@ -10,7 +10,7 @@ import nl.avthart.todo.app.domain.task.commands.TaskCommandRestore;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandStar;
 import nl.avthart.todo.app.domain.task.commands.TaskCommandUnstar;
 import nl.avthart.todo.app.query.task.TaskActive;
-import nl.avthart.todo.app.query.task.TaskPrimaryProjectionRepository;
+import nl.avthart.todo.app.query.task.TaskPrimaryProjectionReadRepository;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestCreate;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestModifyTitle;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TaskRequestHandler {
     private final IdentifierFactory identifierFactory = IdentifierFactory.getInstance();
-    private final TaskPrimaryProjectionRepository repo;
+    private final TaskPrimaryProjectionReadRepository repo;
     private final CommandGateway commandGateway;
 
     public Page<TaskActive> findAll( String userName, boolean completed, Pageable pageable ) {

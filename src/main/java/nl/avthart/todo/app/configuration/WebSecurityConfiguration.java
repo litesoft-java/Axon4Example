@@ -1,7 +1,9 @@
 package nl.avthart.todo.app.configuration;
 
+import java.util.List;
 import java.util.Set;
 
+import nl.avthart.todo.app.configuration.security.Role;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,26 +20,18 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
             "/h2-console", "/h2-console/**",
             };
 
+    @SuppressWarnings("FieldCanBeLocal")
     private final Endpoint endpoint;
 
-    public WebSecurityConfiguration( Endpoint endpoint ) {
-        this.endpoint = endpoint;
+    public WebSecurityConfiguration( List<Endpoint.Controller> controllers ) {
+        endpoint = Endpoint.from( Role.asEndpointRoles(), controllers );
+
+        System.out.println( endpoint ); // NOSONAR
     }
 
     @Override
     protected void configure( HttpSecurity http )
             throws Exception {
-
-        for ( RequestMethod rm : RequestMethod.values() ) {
-            Set<String> paths = endpoint.adminPathsFor( rm );
-            if ( !paths.isEmpty() ) {
-                System.out.println( rm + " (admin): " + paths );
-            }
-            paths = endpoint.userPathsFor( rm );
-            if ( !paths.isEmpty() ) {
-                System.out.println( rm + " (user): " + paths );
-            }
-        }
 
         http
                 .authorizeRequests()

@@ -6,6 +6,7 @@ import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import nl.avthart.todo.app.common.util.ExceptionMessage;
 import nl.avthart.todo.app.configuration.Endpoint;
+import nl.avthart.todo.app.configuration.security.Role;
 import nl.avthart.todo.app.query.task.TaskActive;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestCreate;
 import nl.avthart.todo.app.rest.task.requests.TaskRequestModifyTitle;
@@ -68,19 +69,23 @@ public class TaskController implements Endpoint.Controller {
 
     @PostMapping("/{identifier}/unstar") // IMO: should be PATCH, but not supported by current Angular version
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Deprecated // Sample
     public void unstar( @PathVariable String identifier ) {
         handler.unstar( identifier );
     }
 
     @DeleteMapping("/{identifier}/delete")
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    @Endpoint.Updated(date = "2021-01-15, 2021-01-16")
     public void delete( @PathVariable String identifier ) {
         handler.delete( identifier );
     }
 
     @PutMapping("/{identifier}/restore")
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
-    @Endpoint.Admin
+    @Role.AdminAccessRequired
+    @Endpoint.Updated(date = "2021-01-15")
+    @Deprecated
     public void restore( @PathVariable String identifier ) {
         handler.restore( identifier );
     }

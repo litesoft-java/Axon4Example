@@ -20,11 +20,21 @@ public abstract class AbstractTaskEntry_v001 {
 
     private static final FieldAccessors<AbstractTaskEntry_v001> FIELD_ACCESSORS =
             FieldAccessors.builder( AbstractTaskEntry_v001.class )
-                    .add( AbstractTaskEntry_v001::getCreatedHour, "createdHour" )
-                    .add( AbstractTaskEntry_v001::getUsername, "username" )
-                    .add( AbstractTaskEntry_v001::getTitle, "title" )
-                    .add( AbstractTaskEntry_v001::isCompleted, "completed" )
-                    .add( AbstractTaskEntry_v001::isStarred, "starred" )
+                    .add( "createdHour",
+                          AbstractTaskEntry_v001::getCreatedHour,
+                          AbstractTaskEntry_v001::setCreatedHour )
+                    .add( "username",
+                          AbstractTaskEntry_v001::getUsername,
+                          AbstractTaskEntry_v001::setUsername )
+                    .add( "title",
+                          AbstractTaskEntry_v001::getTitle,
+                          AbstractTaskEntry_v001::setTitle )
+                    .add( "completed",
+                          AbstractTaskEntry_v001::isCompleted,
+                          AbstractTaskEntry_v001::setCompleted )
+                    .add( "starred",
+                          AbstractTaskEntry_v001::isStarred,
+                          AbstractTaskEntry_v001::setStarred )
                     .build();
 
     protected AbstractTaskEntry_v001( AbstractTaskEntry_v001 fields ) {
@@ -41,5 +51,13 @@ public abstract class AbstractTaskEntry_v001 {
 
     public String delta( AbstractTaskEntry_v001 them ) {
         return FIELD_ACCESSORS.delta( this, them );
+    }
+
+    public void updateFrom( AbstractTaskEntry_v001 them ) {
+        FIELD_ACCESSORS.updateFirst( this, them );
+    }
+
+    public void defaultFrom( AbstractTaskEntry_v001 them ) {
+        FIELD_ACCESSORS.defaultFromSecond( this, them );
     }
 }

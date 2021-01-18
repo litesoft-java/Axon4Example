@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class TaskPrimaryProjectionRepositoryAdapter implements TaskPrimaryProjectionRepository {
+public class TaskPrimaryProjectionRepositoryAdapter implements TaskPrimaryProjectionWriteRepository {
     private final TaskEntryJpaActiveRepository activeRepo;
     private final TaskEntryJpaDeletedRepository deletedRepo;
 

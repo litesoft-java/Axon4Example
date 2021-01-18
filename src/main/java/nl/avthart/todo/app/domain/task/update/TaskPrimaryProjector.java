@@ -3,6 +3,7 @@ package nl.avthart.todo.app.domain.task.update;
 import java.time.Instant;
 
 import nl.avthart.todo.app.common.axon.AbstractPrimaryProjector;
+import nl.avthart.todo.app.common.axon.AggregateObject;
 import nl.avthart.todo.app.common.axon.Event;
 import nl.avthart.todo.app.common.axon.LastEventReader;
 import nl.avthart.todo.app.common.exceptions.BusinessRuleException;
@@ -25,7 +26,8 @@ import nl.avthart.todo.app.flags.Monitor;
 import nl.avthart.todo.app.query.task.TaskActive;
 import nl.avthart.todo.app.query.task.TaskDeleted;
 import nl.avthart.todo.app.query.task.TaskEntity;
-import nl.avthart.todo.app.query.task.TaskPrimaryProjectionRepository;
+import nl.avthart.todo.app.query.task.TaskPrimaryProjectionReadRepository;
+import nl.avthart.todo.app.query.task.TaskPrimaryProjectionWriteRepository;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.eventhandling.EventHandler;
@@ -36,7 +38,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskCommand, AbstractTaskCommandLoad, TaskActive, TaskDeleted> {
 
-    public TaskPrimaryProjector( TaskPrimaryProjectionRepository repo,
+    public TaskPrimaryProjector( TaskPrimaryProjectionWriteRepository repo,
                                  LastEventReader lastEventReader,
                                  CommandGateway commandGateway ) {
         super( repo, lastEventReader, commandGateway, "Task", TaskAggregate.class );
@@ -78,21 +80,14 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
 
     @Override
     protected TaskCommand optionalUpdateCommand( TaskActive active, AbstractTaskCommandLoad command, boolean overwrite ) {
-        command.setCreatedHour( loadUpdateField( active.getCreatedHour(), command.getCreatedHour() ) );
-        command.setUsername( loadUpdateField( active.getUsername(), command.getUsername() ) );
-        command.setTitle( loadUpdateField( active.getTitle(), command.getTitle() ) );
+        command.defaultFrom( active );
         if ( active.isEquivalent( command ) ) {
             return null; // No change needed
         }
         if ( !overwrite ) {
             throw new CantUpdateException( error( active, active.delta( command ) ) );
         }
-        return new TaskCommandUpdate( active.getId(),
-                                      command.getCreatedHour(),
-                                      command.getUsername(),
-                                      command.getTitle(),
-                                      command.isCompleted(),
-                                      command.isStarred() );
+        return new TaskCommandUpdate( active.getId(), command );
     }
 
     // Created
@@ -116,20 +111,12 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
     }
 
     private TaskActive map( TaskEventCreated event, Instant createdAt ) {
-        return new TaskActive( TaskEntity.builder()
-                                       .id( event.getId() )
-                                       .version( 0L )
-                                       .createdHour( loadUpdateField( toHour( createdAt ), event.getCreatedHour() ) )
-                                       .username( event.getUsername() )
-                                       .title( event.getTitle() )
-                                       .completed( event.isCompleted() )
-                                       .starred( event.isStarred() )
-                                       .build() );
+        return new TaskActive( new TaskEntity( event.getId(), 0L, createdAt, event ) );
     }
 
     // Updated
-    public TaskEventUpdated syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventUpdated event ) {
-        syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( currentVersion, event ) ) );
+    public TaskEventUpdated syncProcess( AggregateObject<String> aggregate, Instant lastModifiedAt, TaskEventUpdated event ) {
+        syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( aggregate, event ) ) );
         return event;
     }
 
@@ -139,20 +126,16 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
         handlerUpdate( map( event, checkHandlerUpdate( nextVersion, event ) ), createdAt );
     }
 
-    private TaskActive map( TaskEventUpdated event, TaskActive task ) {
-        if ( task != null ) {
-            task.setCreatedHour( loadUpdateField( task.getCreatedHour(), event.getCreatedHour() ) );
-            task.setUsername( event.getUsername() );
-            task.setTitle( event.getTitle() );
-            task.setCompleted( event.isCompleted() );
-            task.setStarred( event.isStarred() );
+    private TaskActive map( TaskEventUpdated event, TaskActive entity ) {
+        if ( entity != null ) {
+            entity.updateFrom( event );
         }
-        return task;
+        return entity;
     }
 
     // Starred
-    public TaskEventStarred syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventStarred event ) {
-        syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( currentVersion, event ) ) );
+    public TaskEventStarred syncProcess( AggregateObject<String> aggregate, Instant lastModifiedAt, TaskEventStarred event ) {
+        syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( aggregate, event ) ) );
         return event;
     }
 
@@ -170,8 +153,8 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
         return task;
     }
 
-    public TaskEventUnstarred syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventUnstarred event ) {
-        TaskActive task = checkSyncUpdate( currentVersion, event );
+    public TaskEventUnstarred syncProcess( AggregateObject<String> aggregate, Instant lastModifiedAt, TaskEventUnstarred event ) {
+        TaskActive task = checkSyncUpdate( aggregate, event );
         // vvv Testing
         if ( "SkipUnstar".equals( task.getTitle() ) ) {
             return event;
@@ -195,8 +178,8 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
         return task;
     }
 
-    public TaskEventTitleModified syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventTitleModified event ) {
-        TaskActive task = checkSyncUpdate( currentVersion, event );
+    public TaskEventTitleModified syncProcess( AggregateObject<String> aggregate, Instant lastModifiedAt, TaskEventTitleModified event ) {
+        TaskActive task = checkSyncUpdate( aggregate, event );
         // vvv Testing
         if ( "BadVersion".equals( event.getTitle() ) && task.isStarred() ) { // Faking user sent bad Version!
             task = new TaskActive( task.toBuilder().version( 0L ).build() ); // Forces new entity which is NOT in the ORM transaction
@@ -219,8 +202,8 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
         return task;
     }
 
-    public TaskEventCompleted syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventCompleted event ) {
-        syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( currentVersion, event ) ) );
+    public TaskEventCompleted syncProcess( AggregateObject<String> aggregate, Instant lastModifiedAt, TaskEventCompleted event ) {
+        syncUpdate( lastModifiedAt, map( event, checkSyncUpdate( aggregate, event ) ) );
         return event;
     }
 
@@ -238,9 +221,8 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
         return task;
     }
 
-    public TaskEventDeleted syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventDeleted event ) {
-        // Not currently Deleted (checked in Aggregate)
-        syncDelete( lastModifiedAt, checkSyncDelete( currentVersion, event ) );
+    public TaskEventDeleted syncProcess( AggregateObject<String> aggregate, Instant lastModifiedAt, TaskEventDeleted event ) {
+        syncDelete( lastModifiedAt, checkSyncDelete( aggregate, event ) );
         return event;
     }
 
@@ -251,9 +233,8 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
         handlerDelete( checkHandlerDelete( nextVersion, event ), createdAt );
     }
 
-    public TaskEventRestored syncProcess( long currentVersion, Instant lastModifiedAt, TaskEventRestored event ) {
-        // Currently Deleted (checked in Aggregate)
-        syncRestore( lastModifiedAt, checkSyncRestore( currentVersion, event ) );
+    public TaskEventRestored syncProcess( AggregateObject<String> aggregate, Instant lastModifiedAt, TaskEventRestored event ) {
+        syncRestore( lastModifiedAt, checkSyncRestore( aggregate, event ) );
         return event;
     }
 
@@ -262,13 +243,6 @@ public class TaskPrimaryProjector extends AbstractPrimaryProjector<String, TaskC
     void on( TaskEventRestored event, @SequenceNumber long nextVersion, @Timestamp Instant createdAt ) {
         // Don't know if Deleted, but if it is then assume it should be restored
         handlerRestore( checkHandlerRestore( nextVersion, event ), createdAt );
-    }
-
-    private String toHour( Instant instant ) {
-        // 2020-11-19T13Z
-        // 01234567-10123
-        // 2020-11-19T13:12:11.101Z
-        return instant.toString().substring( 0, 13 ) + "Z";
     }
 
     // vvv Testing
