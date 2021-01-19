@@ -363,25 +363,22 @@ public class Endpoint {
 
         protected void process( Updated annotation ) {
             String date = annotation.date().trim();
-            if ( !date.matches( "[0-9]{4}-[0-9]{2}-[0-9]{2}.*" ) ) {
+            if ( !checkUpdatedData( date ) ) {
                 throw new IllegalStateException( "Updated annotation, but no 'date' specified" );
             }
-            while ( true ) {
-                // yyyy-mm-dd[, {repeat}]
+            do {
+                // yyyy-mm-dd[, yyyy-mm-dd]*
                 // 01234567890
                 updated.add( date.substring( 0, 10 ) );
                 date = date.substring( 10 ).trim();
+                if ( date.startsWith( "," ) ) { // trailing comma OK
+                    date = date.substring( 1 ).trim();
+                }
                 if ( date.isEmpty() ) {
                     return;
                 }
-                if ( date.startsWith( "," ) ) {
-                    date = date.substring( 1 ).trim();
-                    if ( date.matches( "[0-9]{4}-[0-9]{2}-[0-9]{2}.*" ) ) {
-                        continue;
-                    }
-                }
-                throw new IllegalStateException( "Updated annotation, unexpected value starting with: " + date );
-            }
+            } while ( checkUpdatedData( date ) );
+            throw new IllegalStateException( "Updated annotation, unexpected value starting with: " + date );
         }
 
         protected void process( RequestMapping annotation ) {
@@ -531,4 +528,93 @@ public class Endpoint {
         }
         return sb.toString();
     }
+
+    @SuppressWarnings("RedundantIfStatement")
+    static boolean checkUpdatedData( String date ) { // trimmed!
+        // yyyy-mm-dd[, yyyy-mm-dd]*
+        // 01234567890
+        int length = date.length();
+        if ( length > 10 ) {
+            char c = (date.substring( 10 ).trim() + ",").charAt( 0 ); // Trailing commas OK!
+            if ( c != ',' ) {
+                return false;
+            }
+        }
+        if ( length < 10 ) {
+            return false;
+        }
+        if ( (date.charAt( 4 ) != '-') || (date.charAt( 7 ) != '-') ) {
+            return false;
+        }
+        int year, month, day;
+        try {
+            year = Integer.parseInt( date.substring( 0, 4 ) );
+            month = Integer.parseInt( date.substring( 5, 7 ) );
+            day = Integer.parseInt( date.substring( 8, 10 ) );
+        }
+        catch ( NumberFormatException ignore ) {
+            return false;
+        }
+        if ( year < 2020 ) {
+            return false;
+        }
+        if ( (month < 1) || (12 < month) ) {
+            return false;
+        }
+        if ( (day < 1) || (31 < day) ) {
+            return false;
+        }
+        if ( day > 28 ) {
+            int daysInMonth = daysInMonth( year, month );
+            if ( daysInMonth < day ) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @SuppressWarnings("RedundantIfStatement")
+    static boolean isLeapYear( int year ) { // year assumed to be after the adoption of the Gregorian calendar!
+        // Rule 1 - divisible by 4 - probably a leap year
+        if ( positivedivisibleBy4( year ) ) { // IS Rule 1
+            // Rule 2 - divisible by 100 - probably NOT a leap year
+            int hundredthYear = year / 100;
+            if ( year == (100 * hundredthYear) ) { // IS Rule 2
+                // Rule 3 - divisible by 400 - IS a leap year
+                if ( positivedivisibleBy4( hundredthYear ) ) {  // IS Rule 3
+                    return true;
+                }
+                return false; // NOT 400 Year, but as a 100 Year, NOT a leap year!
+            }
+            return true; // NOT 400 Year NOR a 100 Year, so IS simply Rule 1 - IS a leap year!
+        }
+        return false; // No rules apply - NOT a leap year!
+    }
+
+    static boolean positivedivisibleBy4( int value ) {
+        return (value & 3) == 0;
+    }
+
+    static int daysInMonth( int year, int month ) { // month is valid (1-12)!
+        if ( month == 2 ) { // February
+            return isLeapYear( year ) ? 29 : 28;
+        }
+        return daysInMonthMap[month];
+    }
+
+    private static final int[] daysInMonthMap = {
+            -1, // Filler
+            31, //  1 - January
+            -1, //  2 - February (28 or 29)
+            31, //  3 - March
+            30, //  4 - April
+            31, //  5 - May
+            30, //  6 - June
+            31, //  7 - July
+            31, //  8 - August
+            30, //  9 - September
+            31, // 10 - October
+            30, // 11 - November
+            31, // 12 - December
+    };
 }
