@@ -85,7 +85,7 @@ public class TaskController implements Endpoint.Controller {
     @ResponseStatus(value = HttpStatus.NO_CONTENT)
     @Role.AdminAccessRequired
     @Endpoint.Updated(date = "2021-01-15")
-    @Deprecated
+    @Endpoint.Internal
     public void restore( @PathVariable String identifier ) {
         handler.restore( identifier );
     }

@@ -32,6 +32,11 @@ public class Endpoint {
         String date() default ""; // yyyy-mm-dd
     }
 
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface Internal {
+    }
+
     public interface Controller {
     }
 
@@ -226,6 +231,7 @@ public class Endpoint {
         private final Role roleFromClass;
         private final String pathFromClass;
         private final boolean deprecatedFromClass;
+        private final boolean internalFromClass;
         private final List<String> updatedFromClass;
 
         public ControllerClass( Class<?> c ) {
@@ -237,6 +243,7 @@ public class Endpoint {
             roleFromClass = ca.role;
             pathFromClass = (ca.webPath == null) ? "" : ca.webPath;
             deprecatedFromClass = ca.deprecated;
+            internalFromClass = ca.internal;
             updatedFromClass = ca.updated;
         }
 
@@ -272,8 +279,9 @@ public class Endpoint {
             Role role = ma.mergeRoles( roleFromClass );
 
             boolean deprecated = ma.mergeDeprecated( deprecatedFromClass );
+            boolean internal = ma.mergeInternal( internalFromClass );
             List<String> updated = ma.mergeUpdated( updatedFromClass );
-            String infos = createInfos( deprecated, updated );
+            String infos = createInfos( deprecated, internal, updated );
 
             add( role, rm, normalizeWebPath( path ), infos );
         }
@@ -282,6 +290,7 @@ public class Endpoint {
     private abstract class CommonInterestingAnnotations {
         protected final List<String> updated = new ArrayList<>();
         protected boolean deprecated;
+        protected boolean internal;
         protected String webPath;
         protected Role role = defaultRole;
 
@@ -297,6 +306,10 @@ public class Endpoint {
                     }
                 }
             }
+        }
+
+        public boolean mergeInternal( boolean internalFromClass ) {
+            return this.internal || internalFromClass;
         }
 
         public boolean mergeDeprecated( boolean deprecatedFromClass ) {
@@ -335,6 +348,8 @@ public class Endpoint {
                 process( (RequestMapping)annotation );
             } else if ( annotationClass == Updated.class ) {
                 process( (Updated)annotation );
+            } else if ( annotationClass == Internal.class ) {
+                process( (Internal)annotation );
             } else if ( annotationClass == Deprecated.class ) {
                 process( (Deprecated)annotation );
             } else {
@@ -359,6 +374,11 @@ public class Endpoint {
         @SuppressWarnings("unused")
         protected void process( Deprecated annotation ) {
             deprecated = true;
+        }
+
+        @SuppressWarnings("unused")
+        protected void process( Internal annotation ) {
+            internal = true;
         }
 
         protected void process( Updated annotation ) {
@@ -471,26 +491,35 @@ public class Endpoint {
         }
     }
 
-    private static String createInfos( boolean deprecated, List<String> updated ) {
-        String rv = deprecated ? "** DEPRECATED **" : "";
-        if ( updated.isEmpty() ) {
-            return rv;
+    private static String createInfos( boolean deprecated, boolean internal, List<String> updated ) {
+        if ( !deprecated && !internal && updated.isEmpty() ) {
+            return "";
         }
-        StringBuilder sb = new StringBuilder( rv );
-        if ( deprecated ) {
-            sb.append( ", " );
-        }
-        sb.append( "Updated: " );
-        if ( updated.size() == 1 ) {
-            sb.append( updated.get( 0 ) );
-        } else {
-            Collections.sort( updated );
-            sb.append( updated.get( 0 ) );
-            for ( int i = 1; i < updated.size(); i++ ) {
-                sb.append( ", " ).append( updated.get( i ) );
+        StringBuilder sb = new StringBuilder();
+        add( sb, deprecated, () -> sb.append( "** DEPRECATED **" ));
+        add( sb, internal, () -> sb.append( "** INTERNAL **" ) );
+        add( sb, !updated.isEmpty(), () -> {
+            sb.append( "Updated: " );
+            if ( updated.size() == 1 ) {
+                sb.append( updated.get( 0 ) );
+            } else {
+                Collections.sort( updated );
+                sb.append( updated.get( 0 ) );
+                for ( int i = 1; i < updated.size(); i++ ) {
+                    sb.append( ", " ).append( updated.get( i ) );
+                }
             }
-        }
+        } );
         return sb.toString();
+    }
+
+    private static void add( StringBuilder sb, boolean addIt, Runnable messageAdder ) {
+        if ( addIt ) {
+            if ( sb.length() != 0 ) {
+                sb.append( ", " );
+            }
+            messageAdder.run();
+        }
     }
 
     private static Role extractDefaultRole( List<Role> roles ) {
